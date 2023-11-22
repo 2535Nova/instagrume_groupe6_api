@@ -8,31 +8,38 @@ use App\Entity\Post;
 use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 
 class AppFixtures extends Fixture
 {
+    private $passwordHasher;
+    public  function __construct(UserPasswordHasherInterface $passwordHasher)
+    {
+        $this->passwordHasher = $passwordHasher;
+    }
     public function load(ObjectManager $manager): void
     {
+
 
         $Admin = new User();
         $Admin->setUsername("root");
         $Admin->setRoles(["ROLE_ADMIN"]);
-        $Admin->setPassword("root");
+        $Admin->setPassword($this->passwordHasher->hashPassword($Admin, 'root'));
         $Admin->setBan(FALSE);
         $manager->persist($Admin);
 
         $User = new User();
         $User->setUsername("user");
         $User->setRoles(["ROLE_USER"]);
-        $User->setPassword("user");
+        $User->setPassword($this->passwordHasher->hashPassword($User, 'user'));
         $User->setBan(FALSE);
         $manager->persist($User);
 
         $Test = new User();
         $Test->setUsername("test");
         $Test->setRoles(["ROLE_USER"]);
-        $Test->setPassword("test");
+        $Test->setPassword($this->passwordHasher->hashPassword($Test, 'test'));
         $Test->setBan(TRUE);
         $manager->persist($Test);
 
@@ -66,7 +73,7 @@ class AppFixtures extends Fixture
         $Like1->setPost($Post3);
         $Like1->setIslike(FALSE);
         $manager->persist($Like1);
-        
+
         $Like2 = new Like();
         $Like2->setUser($Test);
         $Like2->setPost($Post2);
@@ -84,7 +91,7 @@ class AppFixtures extends Fixture
         $commantaire->setPostId($Post);
         $commantaire->setCommentaireId($commantaire);
         $commantaire->setContent("ceci est un test");
-        $date = new \DateTime ("2000-02-02");
+        $date = new \DateTime("2000-02-02");
         $commantaire->setDate($date);
         $manager->persist($commantaire);
 
@@ -93,7 +100,7 @@ class AppFixtures extends Fixture
         $commantaire1->setPostId($Post3);
         $commantaire1->setCommentaireId($commantaire1);
         $commantaire1->setContent("ceci est le deuxieme commantair");
-        $date1 = new \DateTime ("2050-08-10");
+        $date1 = new \DateTime("2050-08-10");
         $commantaire1->setDate($date1);
         $manager->persist($commantaire1);
 
@@ -102,7 +109,7 @@ class AppFixtures extends Fixture
         $commantaire2->setPostId($Post3);
         $commantaire2->setCommentaireId($commantaire1);
         $commantaire2->setContent("ceci est un test de réponse de commantair");
-        $date2 = new \DateTime ("2055-08-10");
+        $date2 = new \DateTime("2055-08-10");
         $commantaire2->setDate($date2);
         $manager->persist($commantaire2);
 
