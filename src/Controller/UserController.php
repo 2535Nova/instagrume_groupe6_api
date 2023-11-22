@@ -111,7 +111,26 @@ class UserController extends AbstractController
     }
 
 
-    private function createUser()
+    #[Route('/api/inscription', methods: ['POST'])]
+    #[Security(name: null)]
+    #[OA\Post(description: 'inscription')]
+    #[OA\Response(
+        response: 200,
+        description: 'Un user'
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'username', type: 'string', default: 'admin'),
+                new OA\Property(property: 'password', type: 'string', default: 'password'),
+                new OA\Property(property: 'avatar', type: 'string', default: 'avatar')
+            ]
+        )
+    )]
+    #[OA\Tag(name: 'utilisateurs')]
+    public function createUser(ManagerRegistry $doctrine)
     {
         $input = (array) json_decode(file_get_contents('php://input'), true);
         if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
@@ -151,9 +170,13 @@ class UserController extends AbstractController
             }
 
 
-            $user = new User($input["username"], $input["password"], $input["avatar"]);
-            
-
+            $entityManager = $doctrine->getManager();
+            $user = new User();
+            $user->setUsername($input["username"]);
+            $user->setPassword($input["password"]);
+            $user->setAvatar($input["avatar"]);
+            $entityManager->persist($user);
+            $entityManager->flush();
 
             $response['status_code_header'] = $_SERVER['SERVER_PROTOCOL'] . ' 201 Created';
             $response['body'] = json_encode($user);
