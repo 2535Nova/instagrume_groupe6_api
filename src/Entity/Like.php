@@ -14,14 +14,12 @@ class Like
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\OneToOne(cascade: ['persist', 'remove'])]
+    #[ORM\ManyToOne(cascade: ['persist', 'remove'])]
     private ?User $user = null;
 
     #[ORM\Column]
     private ?bool $islike = null;
 
-    #[ORM\Column]
-    private ?bool $isdislike = null;
 
     #[ORM\ManyToOne(inversedBy: 'likes')]
     #[ORM\JoinColumn(nullable: false)]
@@ -44,17 +42,7 @@ class Like
         return $this;
     }
 
-    public function isIsdislike(): ?bool
-    {
-        return $this->isdislike;
-    }
 
-    public function setIsdislike(bool $isdislike): static
-    {
-        $this->isdislike = $isdislike;
-
-        return $this;
-    }
 
     public function getUser(): ?User
     {
