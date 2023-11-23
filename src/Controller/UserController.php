@@ -100,15 +100,15 @@ class UserController extends AbstractController
             items: new OA\Items(ref: new Model(type: User::class))
         )
     )]
-    #[OA\Tag(name: 'utilisateurs')]
-    public function getAllUsers(ManagerRegistry $doctrine)
-    {
+#[OA\Tag(name: 'utilisateurs')]
+public function getAllUsers(ManagerRegistry $doctrine)
+{
+    $entityManager = $doctrine->getManager();
+    $users = $entityManager->getRepository(User::class)->findAll();
 
-        $entityManager = $doctrine->getManager();
+    return new Response($this->jsonConverter->encodeToJson($users));
+}
 
-        $users = $entityManager->getRepository(User::class)->findAll();
-        return new Response($this->jsonConverter->encodeToJson($users));
-    }
 
 
     #[Route('/api/inscription', methods: ['POST'])]
