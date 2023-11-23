@@ -28,8 +28,8 @@ class UserController extends AbstractController
     
     public  function __construct(JsonConverter $jsonConverter, UserPasswordHasherInterface $passwordHasher)
     {
-        $this->passwordHasher = $passwordHasher;
-        $this->jsonConverter = $jsonConverter;
+        $this->passwordHasher= $passwordHasher;
+        $this->jsonConverter= $jsonConverter;
     }
 
     #[Route('/api/login', methods: ['POST'])]
@@ -52,15 +52,15 @@ class UserController extends AbstractController
     #[OA\Tag(name: 'utilisateurs')]
     public function logUser(ManagerRegistry $doctrine, JWTTokenManagerInterface $JWTManager)
     {
-        $request = Request::createFromGlobals();
-        $data = json_decode($request->getContent(), true);
+        $request= Request::createFromGlobals();
+        $data= json_decode($request->getContent(), true);
 
         if (!is_array($data) || $data == null || empty($data['username']) || empty($data['password'])) {
             return new Response('Identifiants invalides', 401);
         }
 
-        $entityManager = $doctrine->getManager();
-        $user = $entityManager->getRepository(User::class)->findOneBy(['username' => $data['username']]);
+        $entityManager= $doctrine->getManager();
+        $user= $entityManager->getRepository(User::class)->findOneBy(['username' => $data['username']]);
 
         if (!$user) {
             throw $this->createNotFoundException();
@@ -69,7 +69,7 @@ class UserController extends AbstractController
             return new Response('Identifiants invalides', 401);
         }
 
-        $token = $JWTManager->create($user);
+        $token= $JWTManager->create($user);
         return new JsonResponse(['token' => $token]);
     }
 
@@ -83,9 +83,9 @@ class UserController extends AbstractController
     #[OA\Tag(name: 'utilisateurs')]
     public function getUtilisateur(JWTEncoderInterface $jwtEncoder, Request $request)
     {
-        $tokenString = str_replace('Bearer ', '', $request->headers->get('Authorization'));
+        $tokenString= str_replace('Bearer ', '', $request->headers->get('Authorization'));
 
-        $user = $jwtEncoder->decode($tokenString);
+        $user= $jwtEncoder->decode($tokenString);
 
         return new Response($this->jsonConverter->encodeToJson($user));
     }
@@ -103,8 +103,8 @@ class UserController extends AbstractController
 #[OA\Tag(name: 'utilisateurs')]
 public function getAllUsers(ManagerRegistry $doctrine)
 {
-    $entityManager = $doctrine->getManager();
-    $users = $entityManager->getRepository(User::class)->findAll();
+    $entityManager= $doctrine->getManager();
+    $users= $entityManager->getRepository(User::class)->findAll();
 
     return new Response($this->jsonConverter->encodeToJson($users));
 }
@@ -130,7 +130,7 @@ public function getAllUsers(ManagerRegistry $doctrine)
     #[OA\Tag(name: 'utilisateurs')]
     public function createUser(ManagerRegistry $doctrine)
     {
-        $input = (array) json_decode(file_get_contents('php://input'), true);
+        $input= (array) json_decode(file_get_contents('php://input'), true);
         if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
             return $this->unprocessableEntityResponse();
         }
@@ -140,26 +140,26 @@ public function getAllUsers(ManagerRegistry $doctrine)
         // Fonction pour déterminer le format de l'image en fonction des premiers octets
         // Utilise preg_match pour extraire le format de l'image depuis la chaîne base64
         if (preg_match('#^.*?base64,#', $base64_image, $matches)) {
-            $imageFormat = $matches[0]; // Obtient le format de l'image
+            $imageFormat= $matches[0]; // Obtient le format de l'image
 
             // Divise la chaîne en utilisant la virgule comme séparateur
             $parts = explode(';', $base64_image);
 
             if (count($parts) > 0) {
                 // Extrayez la partie finale après la dernière barre oblique
-                $imageFormat = end(explode('/', $parts[0]));
+                $imageFormat= end(explode('/', $parts[0]));
 
                 // Génère un nom de fichier unique
-                $imageName = $input["nom"] . "." . $imageFormat;
+                $imageName= $input["nom"] . "." . $imageFormat;
 
                 // Spécifie le chemin de destination pour enregistrer l'image
                 $destinationPath = "src/images/" . $imageName;
 
                 // Extrait les données de l'image (après la virgule)
-                $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
+                $imageData= substr($base64_image, strpos($base64_image, ',') + 1);
 
                 // Décode la chaîne base64 en binaire
-                $binaryData = base64_decode($imageData);
+                $binaryData= base64_decode($imageData);
             }
 
             if ($binaryData !== false) {
@@ -168,8 +168,8 @@ public function getAllUsers(ManagerRegistry $doctrine)
             }
 
 
-            $entityManager = $doctrine->getManager();
-            $user = new User();
+            $entityManager= $doctrine->getManager();
+            $user= new User();
             $user->setUsername($input["username"]);
             $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
             $user->setAvatar($input["avatar"]);
@@ -184,7 +184,7 @@ public function getAllUsers(ManagerRegistry $doctrine)
 
     private function unprocessableEntityResponse()
     {
-        $response['status_code_header'] = $_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Entity';
+        $response['status_code_header']= $_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Entity';
         $response['body'] = json_encode([
             'error' => 'Invalid input'
         ]);
