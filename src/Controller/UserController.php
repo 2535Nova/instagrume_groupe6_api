@@ -25,7 +25,7 @@ class UserController extends AbstractController
 
     private $jsonConverter;
     private $passwordHasher;
-
+    
     public  function __construct(JsonConverter $jsonConverter, UserPasswordHasherInterface $passwordHasher)
     {
         $this->passwordHasher = $passwordHasher;
@@ -109,14 +109,12 @@ public function getAllUsers(ManagerRegistry $doctrine)
     return new Response($this->jsonConverter->encodeToJson($users));
 }
 
-
-
     #[Route('/api/inscription', methods: ['POST'])]
     #[Security(name: null)]
     #[OA\Post(description: 'inscription')]
     #[OA\Response(
         response: 200,
-        description: 'Un user'
+        description: "insersion d'un user dans la bdd"
     )]
     #[OA\RequestBody(
         required: true,
@@ -173,7 +171,7 @@ public function getAllUsers(ManagerRegistry $doctrine)
             $entityManager = $doctrine->getManager();
             $user = new User();
             $user->setUsername($input["username"]);
-            $user->setPassword($input["password"]);
+            $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
             $user->setAvatar($input["avatar"]);
             $entityManager->persist($user);
             $entityManager->flush();
