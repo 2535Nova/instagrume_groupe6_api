@@ -129,58 +129,49 @@ public function getAllUsers(ManagerRegistry $doctrine)
     )]
     #[OA\Tag(name: 'utilisateurs')]
     public function createUser(ManagerRegistry $doctrine)
-    {
-        $input= (array) json_decode(file_get_contents('php://input'), true);
-        if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
-            return $this->unprocessableEntityResponse();
-        }
-        // La chaîne image base64
-        $base64_image = $input["avatar"];
+{
+    $input = (array) json_decode(file_get_contents('php://input'), true);
 
-        // Fonction pour déterminer le format de l'image en fonction des premiers octets
-        // Utilise preg_match pour extraire le format de l'image depuis la chaîne base64
-        if (preg_match('#^.*?base64,#', $base64_image, $matches)) {
-            $imageFormat= $matches[0]; // Obtient le format de l'image
-
-            // Divise la chaîne en utilisant la virgule comme séparateur
-            $parts = explode(';', $base64_image);
-
-            if (count($parts) > 0) {
-                // Extrayez la partie finale après la dernière barre oblique
-                $imageFormat= end(explode('/', $parts[0]));
-
-                // Génère un nom de fichier unique
-                $imageName= $input["nom"] . "." . $imageFormat;
-
-                // Spécifie le chemin de destination pour enregistrer l'image
-                $destinationPath = "src/images/" . $imageName;
-
-                // Extrait les données de l'image (après la virgule)
-                $imageData= substr($base64_image, strpos($base64_image, ',') + 1);
-
-                // Décode la chaîne base64 en binaire
-                $binaryData= base64_decode($imageData);
-            }
-
-            if ($binaryData !== false) {
-                // Enregistre l'image sur le serveur
-                file_put_contents($destinationPath, $binaryData);
-            }
-
-
-            $entityManager= $doctrine->getManager();
-            $user= new User();
-            $user->setUsername($input["username"]);
-            $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
-            $user->setAvatar($input["avatar"]);
-            $entityManager->persist($user);
-            $entityManager->flush();
-
-            $response['status_code_header'] = $_SERVER['SERVER_PROTOCOL'] . ' 201 Created';
-            $response['body'] = json_encode($user);
-            return $response;
-        }
+    // Vérifiez la présence des champs nécessaires
+    if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
+        return $this->unprocessableEntityResponse();
     }
+    $imageFormat= null;
+    // Obtenez le format de l'image à partir de la chaîne base64
+    $base64_image = $input["avatar"];
+    if (preg_match('#^.*?base64,#', $base64_image, $matches)) {
+        $imageFormat = end(explode('/', $matches[0]));
+    }
+
+    // Générez un nom de fichier unique en utilisant le nom d'utilisateur
+    $imageName = $input["username"] . "." . $imageFormat;
+    $destinationPath = "../../public/images/" . $imageName;
+
+    // Extrait les données de l'image (après la virgule)
+    $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
+
+    // Décode la chaîne base64 en binaire
+    $binaryData = base64_decode($imageData);
+
+    if ($binaryData !== false) {
+        // Enregistre l'image sur le serveur
+        file_put_contents($destinationPath, $binaryData);
+    }
+
+    $entityManager = $doctrine->getManager();
+    $user = new User();
+    $user->setUsername($input["username"]);
+    $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
+    $user->setAvatar($imageName); // Utilisez le nom généré pour l'image
+    $user->setRoles(["ROLE_USER"]);
+    $user->setBan(false);
+    $entityManager->persist($user);
+    $entityManager->flush();
+
+    // Utilisez la classe Response de Symfony pour construire la réponse HTTP
+    $response = new JsonResponse($user, JsonResponse::HTTP_CREATED);
+    return $response;
+}
 
     private function unprocessableEntityResponse()
     {
