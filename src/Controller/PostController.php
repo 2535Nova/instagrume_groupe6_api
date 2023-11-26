@@ -9,6 +9,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use App\Entity\User;
 use OpenApi\Attributes as OA;
 
 class PostController extends AbstractController
@@ -22,6 +24,14 @@ class PostController extends AbstractController
 
     #[Route('/api/posts', methods: ['GET'])]
     #[OA\Tag(name: 'Posts')]
+    #[OA\Response(
+        response: 200,
+        description: 'La liste de tous les posts',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(ref: new Model(type: Post::class))
+        )
+    )]
     public function getAllPosts(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
@@ -32,6 +42,14 @@ class PostController extends AbstractController
 
     #[Route('/api/posts/{id}', methods: ['GET'])]
     #[OA\Tag(name: 'Posts')]
+    #[OA\Response(
+        response: 200,
+        description: 'Retourne le post corspondant a son id',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(ref: new Model(type: Post::class))
+        )
+    )]
     public function getPostById(ManagerRegistry $doctrine, int $id): Response
     {
         $entityManager = $doctrine->getManager();
@@ -51,7 +69,11 @@ class PostController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: 'image', type: 'file'),
-                new OA\Property(property: 'user_id', type: 'int'),
+                new OA\Property(
+                    property: 'user',
+                    type: 'array',
+                    items: new OA\Items(ref: new Model(type: User::class))
+                ),
                 new OA\Property(property: "description", type: "string"),
                 new OA\Property(property: "islock", type: "boolean")
             ]
@@ -68,7 +90,7 @@ class PostController extends AbstractController
         $post = new Post();
         $post->setDescription($data["description"]);
         $post->setIslock($data["islock"]);
-        $post->setUser($data["user_id"]);
+        $post->setUser($data["user"]);
         $post->setImage($data["image"]);
 
         $entityManager->persist($post);
@@ -87,13 +109,7 @@ class PostController extends AbstractController
                 new OA\Property(
                     property: 'user',
                     type: 'array',
-                    items: new OA\Items(
-                        type: 'object',
-                        properties: [
-                            new OA\Property(property: 'id', type: 'integer'),
-                            new OA\Property(property: 'name', type: 'string')
-                        ]
-                    )
+                    items: new OA\Items(ref: new Model(type: User::class))
                 ),
                 new OA\Property(property: "description", type: "string"),
                 new OA\Property(property: "islock", type: "boolean")
