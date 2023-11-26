@@ -140,6 +140,10 @@ class PostController extends AbstractController
     }
 
     #[Route('/api/posts/{id}', methods: ['DELETE'])]
+    #[OA\Response(
+        response: 200,
+        description: 'supprime le post corspondant a son id'
+    )]
     #[OA\Tag(name: 'Posts')]
     public function deletePost(ManagerRegistry $doctrine, int $id): Response
     {
