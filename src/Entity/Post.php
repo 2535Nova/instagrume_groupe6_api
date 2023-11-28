@@ -17,6 +17,7 @@ class Post
 
     #[ORM\ManyToOne(inversedBy: 'posts')]
     #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(onDelete: "CASCADE")]
     private ?User $user = null;
 
     #[ORM\Column(length: 255, nullable: true)]
