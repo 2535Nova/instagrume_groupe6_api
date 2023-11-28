@@ -22,6 +22,7 @@ class Commentaire
 
     #[ORM\ManyToOne(inversedBy: 'commentaires')]
     #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(onDelete: "CASCADE")]
     private ?Post $post_id = null;
 
     #[ORM\Column(length: 255)]
@@ -31,6 +32,7 @@ class Commentaire
     private ?\DateTimeInterface $date = null;
 
     #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'commentaires')]
+    #[ORM\JoinColumn(onDelete: "CASCADE")]
     private ?self $commentaire_id = null;
 
     #[ORM\OneToMany(mappedBy: 'commentaire_id', targetEntity: self::class)]

@@ -14,7 +14,10 @@ class Like
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(cascade: ['persist', 'remove'])]
+
+    #[ORM\ManyToOne(inversedBy: 'like')]
+    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(onDelete: "CASCADE")]
     private ?User $user = null;
 
     #[ORM\Column]
@@ -23,6 +26,7 @@ class Like
 
     #[ORM\ManyToOne(inversedBy: 'likes')]
     #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(onDelete: "CASCADE")]
     private ?Post $post = null;
 
     public function getId(): ?int
