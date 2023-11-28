@@ -173,6 +173,72 @@ class UserController extends AbstractController
     return $response;
 }
 
+    #[Route('/api/users', methods: ['PUT'])]
+    #[OA\Put(description: 'Mise à jour des informations de l\'utilisateur')]
+    #[OA\Put(security: ["oauth2" => ["ROLE_USER", "ROLE_ADMIN"]])]
+    #[OA\Response(
+        response: 200,
+        description: 'L\'utilisateur mis à jour',
+        content: new OA\JsonContent(ref: new Model(type: User::class))
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'username', type: 'string'),
+                new OA\Property(property: 'password', type: 'string'),
+                new OA\Property(property: 'avatar', type: 'string')
+            ]
+        )
+    )]
+    #[OA\Tag(name: 'utilisateurs')]
+    public function putUser(ManagerRegistry $doctrine)
+    {
+        $request= Request::createFromGlobals();
+        $data= json_decode($request->getContent(), true);
+
+        $entityManager = $doctrine->getManager();
+        $user = $entityManager->getRepository(User::class)->findOneBy(['username' => $data['username']]);
+
+        if (!$user) {
+            throw $this->createNotFoundException('Utilisateur non trouvé');
+        }
+
+        if (isset($data['password'])) {
+            $user->setPassword($this->passwordHasher->hashPassword($user, $data['password']));
+        }
+
+        if (isset($data['avatar'])) {
+            $user->setAvatar($data['avatar']);
+        }
+
+        $entityManager->flush();
+
+        return new JsonResponse($user);
+    }
+
+
+    #[Route('/api/users/{id}', methods: ['DELETE'])]
+    #[OA\Delete(description: 'Suppression de l\'utilisateur')]
+    #[Security(name: "ROLE_ADMIN")]
+    #[OA\Response(
+        response: 204,
+        description: 'Utilisateur supprimé avec succès'
+    )]
+    #[OA\Tag(name: 'utilisateurs')]
+    public function deleteUser(ManagerRegistry $doctrine, int $id)
+    {
+        $entityManager = $doctrine->getManager();
+        $user = $entityManager->getRepository(User::class)->find($id);
+        if (!$user) {
+            throw $this->createNotFoundException('Utilisateur non trouvé');
+        }
+        $entityManager->remove($user);
+        $entityManager->flush();
+        return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
+    }
+
     private function unprocessableEntityResponse()
     {
         $response['status_code_header']= $_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Entity';
