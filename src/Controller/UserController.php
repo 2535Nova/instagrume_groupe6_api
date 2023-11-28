@@ -90,6 +90,32 @@ class UserController extends AbstractController
         return new Response($this->jsonConverter->encodeToJson($user));
     }
 
+    #[Route('/api/users/search', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne l\'utilisateur par son username')]
+    #[OA\Parameter(
+        name: 'username',
+        in: 'query',
+        description: 'The field used to order rewards',
+        schema: new OA\Schema(type: 'string')
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'L\'utilisateur correspondant a son username',
+        content: new OA\JsonContent(ref: new Model(type: User::class))
+    )]
+    #[OA\Tag(name: 'utilisateurs')]
+    public function getUtilisateurByusername(ManagerRegistry $doctrine)
+    {
+        $request= Request::createFromGlobals();
+        $username= $request->query->get('username');
+        $entityManager= $doctrine->getManager();
+        $user= $entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+
+
+        return new Response($this->jsonConverter->encodeToJson($user));
+    }
+
+
     #[Route('/api/users', methods: ['GET'])]
     #[OA\Get(description: 'Retourne la liste de tous les utilisateurs')]
     #[OA\Response(
