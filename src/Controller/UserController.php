@@ -25,11 +25,11 @@ class UserController extends AbstractController
 
     private $jsonConverter;
     private $passwordHasher;
-    
+
     public  function __construct(JsonConverter $jsonConverter, UserPasswordHasherInterface $passwordHasher)
     {
-        $this->passwordHasher= $passwordHasher;
-        $this->jsonConverter= $jsonConverter;
+        $this->passwordHasher = $passwordHasher;
+        $this->jsonConverter = $jsonConverter;
     }
 
     #[Route('/api/login', methods: ['POST'])]
@@ -52,15 +52,15 @@ class UserController extends AbstractController
     #[OA\Tag(name: 'utilisateurs')]
     public function logUser(ManagerRegistry $doctrine, JWTTokenManagerInterface $JWTManager)
     {
-        $request= Request::createFromGlobals();
-        $data= json_decode($request->getContent(), true);
+        $request = Request::createFromGlobals();
+        $data = json_decode($request->getContent(), true);
 
         if (!is_array($data) || $data == null || empty($data['username']) || empty($data['password'])) {
             return new Response('Identifiants invalides', 401);
         }
 
-        $entityManager= $doctrine->getManager();
-        $user= $entityManager->getRepository(User::class)->findOneBy(['username' => $data['username']]);
+        $entityManager = $doctrine->getManager();
+        $user = $entityManager->getRepository(User::class)->findOneBy(['username' => $data['username']]);
 
         if (!$user) {
             throw $this->createNotFoundException();
@@ -69,7 +69,7 @@ class UserController extends AbstractController
             return new Response('Identifiants invalides', 401);
         }
 
-        $token= $JWTManager->create($user);
+        $token = $JWTManager->create($user);
         return new JsonResponse(['token' => $token]);
     }
 
@@ -83,9 +83,9 @@ class UserController extends AbstractController
     #[OA\Tag(name: 'utilisateurs')]
     public function getUtilisateur(JWTEncoderInterface $jwtEncoder, Request $request)
     {
-        $tokenString= str_replace('Bearer ', '', $request->headers->get('Authorization'));
+        $tokenString = str_replace('Bearer ', '', $request->headers->get('Authorization'));
 
-        $user= $jwtEncoder->decode($tokenString);
+        $user = $jwtEncoder->decode($tokenString);
 
         return new Response($this->jsonConverter->encodeToJson($user));
     }
@@ -106,10 +106,10 @@ class UserController extends AbstractController
     #[OA\Tag(name: 'utilisateurs')]
     public function getUtilisateurByusername(ManagerRegistry $doctrine)
     {
-        $request= Request::createFromGlobals();
-        $username= $request->query->get('username');
-        $entityManager= $doctrine->getManager();
-        $user= $entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+        $request = Request::createFromGlobals();
+        $username = $request->query->get('username');
+        $entityManager = $doctrine->getManager();
+        $user = $entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
 
 
         return new Response($this->jsonConverter->encodeToJson($user));
@@ -129,8 +129,8 @@ class UserController extends AbstractController
     #[OA\Tag(name: 'utilisateurs')]
     public function getAllUsers(ManagerRegistry $doctrine)
     {
-        $entityManager= $doctrine->getManager();
-        $users= $entityManager->getRepository(User::class)->findAll();
+        $entityManager = $doctrine->getManager();
+        $users = $entityManager->getRepository(User::class)->findAll();
 
         return new Response($this->jsonConverter->encodeToJson($users));
     }
@@ -155,51 +155,61 @@ class UserController extends AbstractController
     )]
     #[OA\Tag(name: 'utilisateurs')]
     public function createUser(ManagerRegistry $doctrine)
-{
-    $input = (array) json_decode(file_get_contents('php://input'), true);
+    {
+        $input = (array) json_decode(file_get_contents('php://input'), true);
 
-    // Vérifiez la présence des champs nécessaires
-    if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
-        return $this->unprocessableEntityResponse();
+        // Vérifiez la présence des champs nécessaires
+        if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
+            return $this->unprocessableEntityResponse();
+        }
+        $base64_image = $input["avatar"];
+
+        // Trouver l'extension du format d'image depuis la chaîne base64
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
+            $imageFormat = $matches[1];
+        
+            // Générer un nom de fichier unique en utilisant le nom d'utilisateur
+            $imageName = $input["username"] . "." . $imageFormat;
+            $destinationPath = "./../public/images/" . $imageName;
+            
+        
+            // Extrait les données de l'image (après la virgule)
+            $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
+        
+            // Décode la chaîne base64 en binaire
+            $binaryData = base64_decode($imageData);
+        
+            if ($binaryData !== false) {
+                // Enregistre l'image sur le serveur
+                file_put_contents($destinationPath, $binaryData);
+            }
+        } else {
+            // Gestion de l'erreur si le format de l'image n'est pas correct
+            // ... (par exemple, renvoyer une réponse d'erreur appropriée)
+        }
+        
+        
+        
+
+        $entityManager = $doctrine->getManager();
+        $user = new User();
+        $user->setUsername($input["username"]);
+        $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
+        $user->setAvatar($imageName); // Utilisez le nom généré pour l'image
+        $user->setRoles(["ROLE_USER"]);
+        $user->setBan(false);
+        $entityManager->persist($user);
+        $entityManager->flush();
+
+        // Utilisez la classe Response de Symfony pour construire la réponse HTTP
+        return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_CREATED);
+    
+        
     }
-    $imageFormat= null;
-    // Obtenez le format de l'image à partir de la chaîne base64
-    $base64_image = $input["avatar"];
-    if (preg_match('#^.*?base64,#', $base64_image, $matches)) {
-        $imageFormat = end(explode('/', $matches[0]));
-    }
 
-    // Générez un nom de fichier unique en utilisant le nom d'utilisateur
-    $imageName = $input["username"] . "." . $imageFormat;
-    $destinationPath = "../../public/images/" . $imageName;
+    
 
-    // Extrait les données de l'image (après la virgule)
-    $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
-
-    // Décode la chaîne base64 en binaire
-    $binaryData = base64_decode($imageData);
-
-    if ($binaryData !== false) {
-        // Enregistre l'image sur le serveur
-        file_put_contents($destinationPath, $binaryData);
-    }
-
-    $entityManager = $doctrine->getManager();
-    $user = new User();
-    $user->setUsername($input["username"]);
-    $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
-    $user->setAvatar($imageName); // Utilisez le nom généré pour l'image
-    $user->setRoles(["ROLE_USER"]);
-    $user->setBan(false);
-    $entityManager->persist($user);
-    $entityManager->flush();
-
-    // Utilisez la classe Response de Symfony pour construire la réponse HTTP
-    $response = new JsonResponse($user, JsonResponse::HTTP_CREATED);
-    return $response;
-}
-
-    #[Route('/api/users', methods: ['PUT'])]
+    #[Route('/api/users/{id}', methods: ['PUT'])]
     #[OA\Put(description: 'Mise à jour des informations de l\'utilisateur')]
     #[OA\Put(security: ["oauth2" => ["ROLE_USER", "ROLE_ADMIN"]])]
     #[OA\Response(
@@ -219,30 +229,59 @@ class UserController extends AbstractController
         )
     )]
     #[OA\Tag(name: 'utilisateurs')]
-    public function putUser(ManagerRegistry $doctrine)
+    public function putUser(ManagerRegistry $doctrine, int $id)
     {
-        $request= Request::createFromGlobals();
-        $data= json_decode($request->getContent(), true);
-
+        $input = (array) json_decode(file_get_contents('php://input'), true);
         $entityManager = $doctrine->getManager();
-        $user = $entityManager->getRepository(User::class)->findOneBy(['username' => $data['username']]);
-
-        if (!$user) {
-            throw $this->createNotFoundException('Utilisateur non trouvé');
+        $user = $entityManager->getRepository(User::class)->find($id);
+    
+        // Vérifiez la présence des champs nécessaires
+        if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
+            return $this->unprocessableEntityResponse();
         }
-
-        if (isset($data['password'])) {
-            $user->setPassword($this->passwordHasher->hashPassword($user, $data['password']));
+        $base64_image = $input["avatar"];
+    
+        // Trouver l'extension du format d'image depuis la chaîne base64
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
+            $imageFormat = $matches[1];
+        
+            // Générer un nom de fichier unique en utilisant le nom d'utilisateur
+            $imageName = $input["username"] . "." . $imageFormat;
+            $destinationPath = "./../public/images/" . $imageName;
+    
+            // Supprimer l'image existante s'il y en a une
+            $existingImagePath = "./../public/images/" . $user->getAvatar();
+            if (file_exists($existingImagePath)) {
+                unlink($existingImagePath);
+            }
+        
+            // Extrait les données de l'image (après la virgule)
+            $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
+        
+            // Décode la chaîne base64 en binaire
+            $binaryData = base64_decode($imageData);
+        
+            if ($binaryData !== false) {
+                // Enregistre la nouvelle image sur le serveur
+                file_put_contents($destinationPath, $binaryData);
+            }
+        } else {
+            // Gestion de l'erreur si le format de l'image n'est pas correct
+            // ... (par exemple, renvoyer une réponse d'erreur appropriée)
         }
-
-        if (isset($data['avatar'])) {
-            $user->setAvatar($data['avatar']);
-        }
-
+        
+        $user->setUsername($input["username"]);
+        $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
+        $user->setAvatar($imageName); // Utilisez le nom généré pour l'image
+        $user->setRoles(["ROLE_USER"]);
+        $user->setBan(false);
+        $entityManager->persist($user);
         $entityManager->flush();
-
-        return new JsonResponse($user);
+    
+        // Utilisez la classe Response de Symfony pour construire la réponse HTTP
+        return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_CREATED);
     }
+    
 
 
     #[Route('/api/users/{id}', methods: ['DELETE'])]
@@ -267,7 +306,7 @@ class UserController extends AbstractController
 
     private function unprocessableEntityResponse()
     {
-        $response['status_code_header']= $_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Entity';
+        $response['status_code_header'] = $_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Entity';
         $response['body'] = json_encode([
             'error' => 'Invalid input'
         ]);
