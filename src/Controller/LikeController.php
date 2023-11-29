@@ -11,7 +11,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use App\Entity\Post;
-use App\Entity\USer;
+use App\Entity\User;
 use OpenApi\Attributes as OA;
 
 class LikeController extends AbstractController
@@ -51,27 +51,35 @@ class LikeController extends AbstractController
             example: '{"message": "Like mis à jour avec succès"}'
         )
     )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: "islike", type: "boolean")
+            ]
+        )
+    )]
     public function updateLike(int $id, Request $request, ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
         $like = $entityManager->getRepository(Like::class)->find($id);
-
+    
         if (!$like) {
             return new Response($this->jsonConverter->encodeToJson(['message' => 'Like non trouvé']), Response::HTTP_NOT_FOUND);
         }
-
+    
         // Update the like based on request data
-        $data = $this->jsonConverter->decodeFromJSon($request->getContent(), Like::class);
+        $data = json_decode($request->getContent(), true);
+    
         // Assuming you have a 'content' field in the Like entity
-        $like->setUser($data["user"]);
         $like->setIslike($data["islike"]);
-        $like->setPost($data["post"]);
-
-
+    
         $entityManager->flush();
-
+    
         return new Response($this->jsonConverter->encodeToJson(['message' => 'Like mis à jour avec succès']));
     }
+    
 
     #[Route('/api/like/{id}', methods: ['DELETE'])]
     #[OA\Tag(name: 'Likes')]
@@ -101,16 +109,8 @@ class LikeController extends AbstractController
         content: new OA\JsonContent(
             type: 'object',
             properties: [
-                new OA\Property(
-                    property: 'post',
-                    type: 'array',
-                    items: new OA\Items(ref: new Model(type: Post::class))
-                ),
-                new OA\Property(
-                    property: 'user',
-                    type: 'array',
-                    items: new OA\Items(ref: new Model(type: User::class))
-                ),
+                new OA\Property(property: "user_id", type: "number"),
+                new OA\Property(property: "post_id", type: "number"),
                 new OA\Property(property: "islike", type: "boolean")
             ]
         )
@@ -126,18 +126,34 @@ class LikeController extends AbstractController
     )]
     public function createLike(Request $request, ManagerRegistry $doctrine): Response
     {
-        $data = $this->jsonConverter->decodeFromJSon($request->getContent(), Like::class);
-
-        $like = new Like();
-        $like->setUser($data["user"]);
-        $like->setIslike($data["islike"]);
-        $like->setPost($data["post"]);
-
-        // Persist and flush the entity
         $entityManager = $doctrine->getManager();
+        $data = json_decode($request->getContent(), true);
+    
+        // Vérifiez que les clés attendues sont présentes dans le tableau $data
+        if (!isset($data["user_id"]) || !isset($data["islike"]) || !isset($data["post_id"])) {
+            return new Response($this->jsonConverter->encodeToJson(['message' => 'Donnees manquantes']), Response::HTTP_BAD_REQUEST);
+        }
+    
+        // Récupérez l'utilisateur et le post
+        $user = $entityManager->getRepository(User::class)->find($data["user_id"]);
+        $post = $entityManager->getRepository(Post::class)->find($data["post_id"]);
+    
+        // Vérifiez que l'utilisateur et le post existent
+        if (!$user || !$post) {
+            return new Response($this->jsonConverter->encodeToJson(['message' => 'Utilisateur ou post non trouve']), Response::HTTP_NOT_FOUND);
+        }
+    
+        // Créez l'objet Like en utilisant les entités récupérées
+        $like = new Like();
+        $like->setUser($user);
+        $like->setIslike($data["islike"]);
+        $like->setPost($post);
+    
+        // Persistez et flush l'entité
         $entityManager->persist($like);
         $entityManager->flush();
-
-        return new Response($this->jsonConverter->encodeToJson(['message' => 'Like créé avec succès']), Response::HTTP_CREATED);
+    
+        return new Response($this->jsonConverter->encodeToJson(['message' => 'Like cree avec succes']), Response::HTTP_CREATED);
     }
+    
 }
