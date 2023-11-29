@@ -68,76 +68,73 @@ class PostController extends AbstractController
         content: new OA\JsonContent(
             type: 'object',
             properties: [
-                new OA\Property(property: 'image', type: 'file'),
-                new OA\Property(
-                    property: 'user',
-                    type: 'array',
-                    items: new OA\Items(ref: new Model(type: User::class))
-                ),
+                new OA\Property(property: "user_id", type: "number"),
+                new OA\Property(property: "image", type: "string"),
+                new OA\Property(property: "islock", type: "boolean"),
                 new OA\Property(property: "description", type: "string"),
-                new OA\Property(property: "islock", type: "boolean")
             ]
         )
     )]
-    #[OA\Tag(name: 'Posts')]    
+    #[OA\Tag(name: 'Posts')]
     public function createPost(ManagerRegistry $doctrine): Response
     {
-        $request= Request::createFromGlobals();
+        $request = Request::createFromGlobals();
         $data = json_decode($request->getContent(), true);
-
+    
         $entityManager = $doctrine->getManager();
-
+    
+        // Récupérez l'utilisateur
+        $user = $entityManager->getRepository(User::class)->find($data["user_id"]);
+    
+        // Créez un nouveau post
         $post = new Post();
         $post->setDescription($data["description"]);
         $post->setIslock($data["islock"]);
-        $post->setUser($data["user"]);
+        $post->setUser($user);
         $post->setImage($data["image"]);
-
+    
+        // Enregistrez le nouveau post
         $entityManager->persist($post);
         $entityManager->flush();
-
+    
         return new Response($this->jsonConverter->encodeToJson($post), Response::HTTP_CREATED);
     }
-
+    
     #[Route('/api/posts/{id}', methods: ['PUT'])]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
             type: 'object',
             properties: [
-                new OA\Property(property: 'image', type: 'file'),
-                new OA\Property(
-                    property: 'user',
-                    type: 'array',
-                    items: new OA\Items(ref: new Model(type: User::class))
-                ),
+                new OA\Property(property: "image", type: "string"),
+                new OA\Property(property: "islock", type: "boolean"),
                 new OA\Property(property: "description", type: "string"),
-                new OA\Property(property: "islock", type: "boolean")
             ]
         )
     )]
     #[OA\Tag(name: 'Posts')]
     public function updatePost(ManagerRegistry $doctrine, int $id): Response
     {
-        $request= Request::createFromGlobals();
+        $request = Request::createFromGlobals();
         $data = json_decode($request->getContent(), true);
-
+    
         $entityManager = $doctrine->getManager();
         $post = $entityManager->getRepository(Post::class)->find($id);
-
+    
         if (!$post) {
-            return new Response('Post not found');
+            return new Response('Post not found', Response::HTTP_NOT_FOUND);
         }
-
+    
         $post->setDescription($data["description"]);
         $post->setIslock($data["islock"]);
-        $post->setUser($data["user"]);
         $post->setImage($data["image"]);
-
+    
         $entityManager->flush();
-
+    
         return new Response($this->jsonConverter->encodeToJson($post));
     }
+    
+    
 
     #[Route('/api/posts/{id}', methods: ['DELETE'])]
     #[OA\Response(
