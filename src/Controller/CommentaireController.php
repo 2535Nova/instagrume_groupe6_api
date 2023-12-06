@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Nelmio\ApiDocBundle\Annotation\Model;
+use Symfony\Component\Security\Core\Security;
 use App\Entity\User;
 use App\Entity\Post;
 
@@ -141,27 +142,36 @@ class CommentaireController extends AbstractController
             items: new OA\Items(ref: new Model(type: Commentaire::class))
         )
     )]
-    public function updateCommentaire(int $id, Request $request, ManagerRegistry $doctrine): Response
-{
-    $entityManager = $doctrine->getManager();
-    $commentaire = $entityManager->getRepository(Commentaire::class)->find($id);
+    public function updateCommentaire(int $id, Request $request, ManagerRegistry $doctrine, Security $security): Response
+    {
+        $entityManager = $doctrine->getManager();
+        $commentaire = $entityManager->getRepository(Commentaire::class)->find($id);
 
-    if (!$commentaire) {
-        return new JsonResponse(['error' => 'Commentaire non trouvé.'], Response::HTTP_NOT_FOUND);
+        if (!$commentaire) {
+            return new JsonResponse(['error' => 'Commentaire non trouvé.'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Récupérer l'utilisateur actuel à partir du token
+        $user = $security->getUser();
+
+        // Vérifier si l'utilisateur est autorisé à mettre à jour ce commentaire (vous pouvez adapter cette logique en fonction de vos besoins)
+        if (!$security->isGranted('ROLE_ADMIN') && $user !== $commentaire->getUser()) {
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à mettre à jour ce commentaire.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        // Mettez à jour les propriétés du commentaire en fonction des données de la requête
+        $commentaire->setContent($data["content"]);
+        // Définir la date et l'heure actuelles
+        $commentaire->setDate(new \DateTime());
+
+        // Enregistrez les modifications
+        $entityManager->flush();
+
+        return new JsonResponse($this->jsonConverter->encodeToJson($commentaire));
     }
 
-    $data = json_decode($request->getContent(), true);
-
-    // Mettez à jour les propriétés du commentaire en fonction des données de la requête
-    $commentaire->setContent($data["content"]);
-    // Définir la date et l'heure actuelles
-    $commentaire->setDate(new \DateTime());
-
-    // Enregistrez les modifications
-    $entityManager->flush();
-
-    return new JsonResponse($this->jsonConverter->encodeToJson($commentaire));
-}
     
 
 
@@ -172,7 +182,7 @@ class CommentaireController extends AbstractController
         response: 200,
         description: 'supprime un commentaire par ID',
     )]
-    public function deleteCommentaire(int $id, ManagerRegistry $doctrine): Response
+    public function deleteCommentaire(int $id, ManagerRegistry $doctrine, Security $security): Response
     {
         $entityManager = $doctrine->getManager();
         $commentaire = $entityManager->getRepository(Commentaire::class)->find($id);
@@ -181,7 +191,14 @@ class CommentaireController extends AbstractController
             return new JsonResponse(['error' => 'Commentaire non trouvé.'], Response::HTTP_NOT_FOUND);
         }
 
-        // Supprimez le commentaire
+        $user = $security->getUser();
+
+        // Vérifier si l'utilisateur actuel est le propriétaire du commentaire
+        if (!$security->isGranted('ROLE_ADMIN') && $user !== $commentaire->getUser()) {
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
+        }
+
+        // Supprimer le commentaire
         $entityManager->remove($commentaire);
         $entityManager->flush();
 
