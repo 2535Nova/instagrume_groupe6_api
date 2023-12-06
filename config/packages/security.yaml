@@ -27,7 +27,7 @@ security:
         - { path: ^/api/commentaire, roles: ROLE_USER }
         - { path: ^/api/like, roles: ROLE_USER }
         - { path: ^/api/posts, roles: PUBLIC_ACCESS }
-        - { path: ^/api/myself, roles: PUBLIC_ACCESS }
+        - { path: ^/api/myself, roles: ROLE_USER }
         - { path: ^/api/users/search, roles: PUBLIC_ACCESS }
         - { path: ^/api/users, roles: ROLE_ADMIN  }
         - { path: ^/api/inscritpion, roles: PUBLIC_ACCESS }
