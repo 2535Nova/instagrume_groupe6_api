@@ -5,9 +5,12 @@ namespace App\DataFixtures;
 use App\Entity\Commentaire;
 use App\Entity\Like;
 use App\Entity\Post;
+use App\Entity\Reponse;
 use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
+use OpenApi\Annotations\Response;
+use OpenApi\Attributes\Response as AttributesResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 
@@ -89,7 +92,6 @@ class AppFixtures extends Fixture
         $commantaire = new Commentaire();
         $commantaire->setUserId($User);
         $commantaire->setPostId($Post);
-        $commantaire->setCommentaireId($commantaire);
         $commantaire->setContent("ceci est un test");
         $date = new \DateTime("2000-02-02");
         $commantaire->setDate($date);
@@ -98,7 +100,6 @@ class AppFixtures extends Fixture
         $commantaire1 = new Commentaire();
         $commantaire1->setUserId($User);
         $commantaire1->setPostId($Post3);
-        $commantaire1->setCommentaireId($commantaire1);
         $commantaire1->setContent("ceci est le deuxieme commantair");
         $date1 = new \DateTime("2050-08-10");
         $commantaire1->setDate($date1);
@@ -107,11 +108,33 @@ class AppFixtures extends Fixture
         $commantaire2 = new Commentaire();
         $commantaire2->setUserId($Test);
         $commantaire2->setPostId($Post3);
-        $commantaire2->setCommentaireId($commantaire1);
         $commantaire2->setContent("ceci est un test de réponse de commantair");
         $date2 = new \DateTime("2055-08-10");
         $commantaire2->setDate($date2);
         $manager->persist($commantaire2);
+
+        $response1 = new Reponse();
+        $response1->setCommentaire($commantaire2);
+        $response1->setContent("Alpha");
+        $response1->setUser($Admin);
+        $response1->setDate($date);
+        $manager->persist($response1);
+
+        $response2 = new Reponse();
+        $response2->setCommentaire($commantaire2);
+        $response2->setContent("Beta");
+        $response2->setUser($User);
+        $response2->setDate($date1);
+        $manager->persist($response2);
+
+        $response3 = new Reponse();
+        $response3->setCommentaire($commantaire);
+        $response3->setContent("Omega");
+        $response3->setUser($Test);
+        $response3->setDate($date2);
+        $manager->persist($response3);
+
+        
 
         $manager->flush();
     }

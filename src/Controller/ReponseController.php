@@ -13,12 +13,11 @@ use Symfony\Component\HttpFoundation\Response;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use App\Entity\User;
 use App\Entity\Post;
-
-
+use App\Entity\Reponse;
 use OpenApi\Attributes as OA;
 
 
-class CommentaireController extends AbstractController
+class ReponseController extends AbstractController
 {
 
     private $jsonConverter;
@@ -28,67 +27,67 @@ class CommentaireController extends AbstractController
         $this->jsonConverter = $jsonConverter;
     }
 
-    #[Route('/api/commentaire', methods: ['GET'])]
-    #[OA\Tag(name: 'Commentaires')]
+    #[Route('/api/reponse', methods: ['GET'])]
+    #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
-        description: 'La liste de tous les commentaires',
+        description: 'La liste de tous les Reponse',
         content: new OA\JsonContent(
             type: 'array',
-            items: new OA\Items(ref: new Model(type: Commentaire::class))
+            items: new OA\Items(ref: new Model(type: Reponse::class))
         )
     )]
     public function getAllPosts(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
-        $commentaires = $entityManager->getRepository(Commentaire::class)->findAll();
+        $reponse = $entityManager->getRepository(Reponse::class)->findAll();
 
-        return new Response($this->jsonConverter->encodeToJson($commentaires));
+        return new Response($this->jsonConverter->encodeToJson($reponse));
     }
 
 
-    #[Route('/api/commentaire/{id}', methods: ['GET'])]
-    #[OA\Tag(name: 'Commentaires')]
+    #[Route('/api/reponse/{id}', methods: ['GET'])]
+    #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
-        description: 'Récupérer un commentaire par ID',
+        description: 'Récupérer une reponse par ID',
         content: new OA\JsonContent(
             type: 'array',
-            items: new OA\Items(ref: new Model(type: Commentaire::class))
+            items: new OA\Items(ref: new Model(type: Reponse::class))
         )
     )]
     public function getCommentaireById(int $id, ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
-        $commentaire = $entityManager->getRepository(Commentaire::class)->find($id);
+        $reponse = $entityManager->getRepository(Reponse::class)->find($id);
 
-        if (!$commentaire) {
-            return new JsonResponse(['error' => 'Commentaire non trouvé.'], Response::HTTP_NOT_FOUND);
+        if (!$reponse) {
+            return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
         }
 
-        return new JsonResponse($this->jsonConverter->encodeToJson($commentaire));
+        return new JsonResponse($this->jsonConverter->encodeToJson($reponse));
     }
 
 
-    #[Route('/api/commentaire', methods: ['POST'])]
+    #[Route('/api/reponse', methods: ['POST'])]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
             type: 'object',
             properties: [
                 new OA\Property(property: "user_id", type: "number"),
-                new OA\Property(property: "post_id", type: "number"),
+                new OA\Property(property: "commentaire_id", type: "number"),
                 new OA\Property(property: "content", type: "string"),
             ]
         )
     )]
-    #[OA\Tag(name: 'Commentaires')]
+    #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
         description: 'Récupérer un commentaire par ID',
         content: new OA\JsonContent(
             type: 'array',
-            items: new OA\Items(ref: new Model(type: Commentaire::class))
+            items: new OA\Items(ref: new Model(type: Reponse::class))
         )
     )]
     public function addCommentaire(Request $request, ManagerRegistry $doctrine): Response
@@ -99,30 +98,30 @@ class CommentaireController extends AbstractController
 
         // Récupérez l'utilisateur et le post
         $user = $entityManager->getRepository(User::class)->find($data["user_id"]);
-        $post = $entityManager->getRepository(Post::class)->find($data["post_id"]);
+        $commentaire = $entityManager->getRepository(Commentaire::class)->find($data["commentaire_id"]);
 
 
 
-        // Créer une nouvelle instance de l'entité Commentaire
-        $commentaire = new Commentaire();
-        $commentaire->setUserId($user);
-        $commentaire->setContent($data["content"]);
+        // Créer une nouvelle instance de l'entité reponse
+        $reponse = new Reponse();
+        $reponse->setUser($user);
+        $reponse->setContent($data["content"]);
 
         // Définir la date et l'heure actuelles
-        $commentaire->setDate(new \DateTime());
+        $reponse->setDate(new \DateTime());
 
-        $commentaire->setPostId($post);
+        $reponse->setCommentaire($commentaire);
 
         // Enregistrez le nouveau commentaire
-        $entityManager->persist($commentaire);
+        $entityManager->persist($reponse);
         $entityManager->flush();
 
-        return new JsonResponse($this->jsonConverter->encodeToJson($commentaire), Response::HTTP_CREATED);
+        return new JsonResponse($this->jsonConverter->encodeToJson($reponse), Response::HTTP_CREATED);
     }
 
 
 
-    #[Route('/api/commentaire/{id}', methods: ['PUT'])]
+    #[Route('/api/reponse/{id}', methods: ['PUT'])]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
@@ -132,57 +131,57 @@ class CommentaireController extends AbstractController
             ]
         )
     )]
-    #[OA\Tag(name: 'Commentaires')]
+    #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
-        description: 'Modifie un commentaire par ID',
+        description: 'Modifie une reponse par ID',
         content: new OA\JsonContent(
             type: 'array',
-            items: new OA\Items(ref: new Model(type: Commentaire::class))
+            items: new OA\Items(ref: new Model(type: Reponse::class))
         )
     )]
     public function updateCommentaire(int $id, Request $request, ManagerRegistry $doctrine): Response
 {
     $entityManager = $doctrine->getManager();
-    $commentaire = $entityManager->getRepository(Commentaire::class)->find($id);
+    $reponse = $entityManager->getRepository(Reponse::class)->find($id);
 
-    if (!$commentaire) {
-        return new JsonResponse(['error' => 'Commentaire non trouvé.'], Response::HTTP_NOT_FOUND);
+    if (!$reponse) {
+        return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
     }
 
     $data = json_decode($request->getContent(), true);
 
     // Mettez à jour les propriétés du commentaire en fonction des données de la requête
-    $commentaire->setContent($data["content"]);
+    $reponse->setContent($data["content"]);
     // Définir la date et l'heure actuelles
-    $commentaire->setDate(new \DateTime());
+    $reponse->setDate(new \DateTime());
 
     // Enregistrez les modifications
     $entityManager->flush();
 
-    return new JsonResponse($this->jsonConverter->encodeToJson($commentaire));
+    return new JsonResponse($this->jsonConverter->encodeToJson($reponse));
 }
     
 
 
 
-    #[Route('/api/commentaire/{id}', methods: ['DELETE'])]
-    #[OA\Tag(name: 'Commentaires')]
+    #[Route('/api/reponse/{id}', methods: ['DELETE'])]
+    #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
-        description: 'supprime un commentaire par ID',
+        description: 'supprime une reponse par ID',
     )]
     public function deleteCommentaire(int $id, ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
-        $commentaire = $entityManager->getRepository(Commentaire::class)->find($id);
+        $reponse = $entityManager->getRepository(Reponse::class)->find($id);
 
-        if (!$commentaire) {
-            return new JsonResponse(['error' => 'Commentaire non trouvé.'], Response::HTTP_NOT_FOUND);
+        if (!$reponse) {
+            return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
         }
 
         // Supprimez le commentaire
-        $entityManager->remove($commentaire);
+        $entityManager->remove($reponse);
         $entityManager->flush();
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);

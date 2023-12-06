@@ -32,18 +32,13 @@ class Post
     #[ORM\OneToMany(mappedBy: 'post', targetEntity: Like::class, orphanRemoval: true)]
     private Collection $likes;
 
-    #[ORM\OneToMany(mappedBy: 'post_id', targetEntity: Commentaire::class, orphanRemoval: true)]
+    #[ORM\OneToMany(mappedBy: 'post', targetEntity: Commentaire::class, orphanRemoval: true)]
     private Collection $commentaires;
 
     public function __construct()
     {
         $this->likes = new ArrayCollection();
         $this->commentaires = new ArrayCollection();
-    }
-
-    public function setId(?int $id): static{
-        $this->id = $id;
-        return $this;
     }
 
     public function getId(): ?int
@@ -141,7 +136,7 @@ class Post
     {
         if (!$this->commentaires->contains($commentaire)) {
             $this->commentaires->add($commentaire);
-            $commentaire->setCommentaireId($this->getId());
+            $commentaire->setPostId($this);
         }
 
         return $this;
@@ -151,12 +146,13 @@ class Post
     {
         if ($this->commentaires->removeElement($commentaire)) {
             // set the owning side to null (unless already changed)
-            if ($commentaire->getCommentaireId() === $this) {
-                $commentaire->setCommentaireId(null);
+            if ($commentaire->getPostId() === $this) {
+                $commentaire->setPostId(null);
             }
         }
 
         return $this;
     }
+
 
 }

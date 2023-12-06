@@ -19,6 +19,7 @@ use OpenApi\Attributes as OA;
 
 use App\Service\JsonConverter;
 use App\Entity\User;
+use Symfony\Component\Security\Core\Role\Role;
 
 class UserController extends AbstractController
 {
@@ -224,7 +225,9 @@ class UserController extends AbstractController
             properties: [
                 new OA\Property(property: 'username', type: 'string'),
                 new OA\Property(property: 'password', type: 'string'),
-                new OA\Property(property: 'avatar', type: 'string')
+                new OA\Property(property: 'avatar', type: 'string'),
+                new OA\Property(property: 'roles', type: 'string',default: '["ROLE_USER"]'),
+                new OA\Property(property: 'ban', type: 'boolean',default: 'false')
             ]
         )
     )]
@@ -236,7 +239,7 @@ class UserController extends AbstractController
         $user = $entityManager->getRepository(User::class)->find($id);
     
         // Vérifiez la présence des champs nécessaires
-        if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
+        if (empty($input["username"]) || empty($input["roles"]) || empty($input["password"]) || empty($input["ban"])) {
             return $this->unprocessableEntityResponse();
         }
         $base64_image = $input["avatar"];
@@ -273,8 +276,8 @@ class UserController extends AbstractController
         $user->setUsername($input["username"]);
         $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
         $user->setAvatar($imageName); // Utilisez le nom généré pour l'image
-        $user->setRoles(["ROLE_USER"]);
-        $user->setBan(false);
+        $user->setRoles($input["roles"]);
+        $user->setBan($input["ban"]);
         $entityManager->persist($user);
         $entityManager->flush();
     

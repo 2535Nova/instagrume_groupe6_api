@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use OpenApi\Annotations\Response;
 
 #[ORM\Entity(repositoryClass: CommentaireRepository::class)]
 class Commentaire
@@ -18,12 +19,13 @@ class Commentaire
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
-    private ?User $user_id = null;
+    private ?User $user = null;
 
     #[ORM\ManyToOne(inversedBy: 'commentaires')]
     #[ORM\JoinColumn(nullable: false)]
     #[ORM\JoinColumn(onDelete: "CASCADE")]
-    private ?Post $post_id = null;
+    private ?Post $post = null;
+
 
     #[ORM\Column(length: 255)]
     private ?string $content = null;
@@ -31,46 +33,21 @@ class Commentaire
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $date = null;
 
-    #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'commentaires')]
-    #[ORM\JoinColumn(onDelete: "CASCADE")]
-    private ?self $commentaire_id = null;
-
-    #[ORM\OneToMany(mappedBy: 'commentaire_id', targetEntity: self::class)]
-    private Collection $commentaires;
+    #[ORM\OneToMany(mappedBy: 'commentaire', targetEntity: Reponse::class, orphanRemoval: true)]
+    private Collection $reponses;
 
     public function __construct()
     {
-        $this->commentaires = new ArrayCollection();
+        $this->reponses = new ArrayCollection();
     }
+
 
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getUserId(): ?User
-    {
-        return $this->user_id;
-    }
-
-    public function setUserId(?User $user_id): static
-    {
-        $this->user_id = $user_id;
-
-        return $this;
-    }
-
-    public function getPostId(): ?Post
-    {
-        return $this->post_id;
-    }
-
-    public function setPostId(?Post $post_id): static
-    {
-        $this->post_id = $post_id;
-
-        return $this;
-    }
+   
 
     public function getContent(): ?string
     {
@@ -96,45 +73,84 @@ class Commentaire
         return $this;
     }
 
-    public function getCommentaireId(): ?self
+    public function getUserId(): ?User
     {
-        return $this->commentaire_id;
+        return $this->user;
     }
 
-    public function setCommentaireId(?self $commentaire_id): static
+    public function setUserId(?User $user_id): static
     {
-        $this->commentaire_id = $commentaire_id;
+        $this->user = $user_id;
+
+        return $this;
+    }
+
+    public function getPostId(): ?Post
+    {
+        return $this->post;
+    }
+
+    public function setPostId(?Post $post_id): static
+    {
+        $this->post = $post_id;
 
         return $this;
     }
 
     /**
-     * @return Collection<int, self>
+     * @return Collection<int, Reponse>
      */
-    public function getCommentaires(): Collection
+    public function getReponses(): Collection
     {
-        return $this->commentaires;
+        return $this->reponses;
     }
 
-    public function addCommentaire(self $commentaire): static
+    public function addReponse(Reponse $reponse): static
     {
-        if (!$this->commentaires->contains($commentaire)) {
-            $this->commentaires->add($commentaire);
-            $commentaire->setCommentaireId($this);
+        if (!$this->reponses->contains($reponse)) {
+            $this->reponses->add($reponse);
+            $reponse->setCommentaire($this);
         }
 
         return $this;
     }
 
-    public function removeCommentaire(self $commentaire): static
+    public function removeReponse(Reponse $reponse): static
     {
-        if ($this->commentaires->removeElement($commentaire)) {
+        if ($this->reponses->removeElement($reponse)) {
             // set the owning side to null (unless already changed)
-            if ($commentaire->getCommentaireId() === $this) {
-                $commentaire->setCommentaireId(null);
+            if ($reponse->getCommentaire() === $this) {
+                $reponse->setCommentaire(null);
             }
         }
 
         return $this;
     }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
+
+        return $this;
+    }
+
+    public function getPost(): ?Post
+    {
+        return $this->post;
+    }
+
+    public function setPost(?Post $post): static
+    {
+        $this->post = $post;
+
+        return $this;
+    }
+
+
+
 }
