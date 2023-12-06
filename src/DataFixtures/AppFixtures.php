@@ -106,7 +106,7 @@ class AppFixtures extends Fixture
         $manager->persist($commantaire1);
 
         $commantaire2 = new Commentaire();
-        $commantaire2->setUserId($Test);
+        $commantaire2->setUserId($Admin);
         $commantaire2->setPostId($Post3);
         $commantaire2->setContent("ceci est un test de réponse de commantair");
         $date2 = new \DateTime("2055-08-10");
