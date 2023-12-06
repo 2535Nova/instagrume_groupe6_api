@@ -96,7 +96,7 @@ class UserController extends AbstractController
     #[OA\Parameter(
         name: 'username',
         in: 'query',
-        description: 'The field used to order rewards',
+        description: 'L\'utilisateur correspondant au nom passé en paramètre URL',
         schema: new OA\Schema(type: 'string')
     )]
     #[OA\Response(
@@ -311,7 +311,7 @@ class UserController extends AbstractController
     {
         $response['status_code_header'] = $_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Entity';
         $response['body'] = json_encode([
-            'error' => 'Invalid input'
+            'error' => 'Données invalid'
         ]);
         return $response;
     }

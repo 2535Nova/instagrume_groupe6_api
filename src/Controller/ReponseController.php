@@ -7,11 +7,12 @@ use App\Service\JsonConverter;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
+use Symfony\Component\Security\Core\Security;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\User;
 use App\Entity\Reponse;
 use OpenApi\Attributes as OA;
@@ -142,13 +143,20 @@ class ReponseController extends AbstractController
             items: new OA\Items(ref: new Model(type: Reponse::class))
         )
     )]
-    public function updateCommentaire(int $id, Request $request, ManagerRegistry $doctrine): Response
+    public function updateCommentaire(int $id, Request $request, ManagerRegistry $doctrine, Security $security): Response
 {
     $entityManager = $doctrine->getManager();
     $reponse = $entityManager->getRepository(Reponse::class)->find($id);
 
     if (!$reponse) {
         return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
+    }
+
+    $user = $security->getUser();
+
+    // Vérifier si l'utilisateur actuel est le propriétaire du reponse
+    if (!$security->isGranted('ROLE_ADMIN') && $user !== $reponse->getUser()) {
+        return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
     }
 
     $data = json_decode($request->getContent(), true);
@@ -173,13 +181,20 @@ class ReponseController extends AbstractController
         response: 200,
         description: 'supprime une reponse par ID',
     )]
-    public function deleteCommentaire(int $id, ManagerRegistry $doctrine): Response
+    public function deleteCommentaire(int $id, ManagerRegistry $doctrine, Security $security): Response
     {
         $entityManager = $doctrine->getManager();
         $reponse = $entityManager->getRepository(Reponse::class)->find($id);
 
         if (!$reponse) {
             return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $security->getUser();
+
+        // Vérifier si l'utilisateur actuel est le propriétaire du reponse
+        if (!$security->isGranted('ROLE_ADMIN') && $user !== $reponse->getUser()) {
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
         }
 
         // Supprimez le commentaire

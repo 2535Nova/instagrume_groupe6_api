@@ -11,6 +11,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
+use Symfony\Component\Security\Core\Security;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\Post;
 use App\Entity\User;
 use OpenApi\Attributes as OA;
@@ -62,13 +64,20 @@ class LikeController extends AbstractController
             ]
         )
     )]
-    public function updateLike(int $id, Request $request, ManagerRegistry $doctrine): Response
+    public function updateLike(int $id, Request $request, ManagerRegistry $doctrine, Security $security): Response
     {
         $entityManager = $doctrine->getManager();
         $like = $entityManager->getRepository(Like::class)->find($id);
     
         if (!$like) {
             return new Response($this->jsonConverter->encodeToJson(['message' => 'Like non trouvé']), Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $security->getUser();
+
+        // Vérifier si l'utilisateur actuel est le propriétaire du like
+        if (!$security->isGranted('ROLE_ADMIN') && $user !== $like->getUser()) {
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
         }
     
         // Update the like based on request data
@@ -89,13 +98,20 @@ class LikeController extends AbstractController
         response: 204,
         description: 'Like supprimé avec succès'
     )]
-    public function deleteLike(int $id, ManagerRegistry $doctrine): Response
+    public function deleteLike(int $id, ManagerRegistry $doctrine, Security $security): Response
     {
         $entityManager = $doctrine->getManager();
         $like = $entityManager->getRepository(Like::class)->find($id);
 
         if (!$like) {
             return new Response($this->jsonConverter->encodeToJson(['message' => 'Like non trouvé']), Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $security->getUser();
+
+        // Vérifier si l'utilisateur actuel est le propriétaire du like
+        if (!$security->isGranted('ROLE_ADMIN') && $user !== $like->getUser()) {
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
         }
 
         // Remove the like

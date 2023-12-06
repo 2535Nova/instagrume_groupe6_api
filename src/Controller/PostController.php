@@ -11,6 +11,8 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
+use Symfony\Component\Security\Core\Security;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\User;
 use OpenApi\Attributes as OA;
 
@@ -59,7 +61,7 @@ class PostController extends AbstractController
         $post = $entityManager->getRepository(Post::class)->find($id);
 
         if (!$post) {
-            return new Response("No Post found");
+            return new Response("Post non trouvé");
         }
 
         return new Response($this->jsonConverter->encodeToJson($post));
@@ -116,7 +118,7 @@ class PostController extends AbstractController
         )
     )]
     #[OA\Tag(name: 'Posts')]
-    public function updatePost(ManagerRegistry $doctrine, int $id): Response
+    public function updatePost(ManagerRegistry $doctrine, int $id, Security $security): Response
     {
         $request = Request::createFromGlobals();
         $data = json_decode($request->getContent(), true);
@@ -125,7 +127,14 @@ class PostController extends AbstractController
         $post = $entityManager->getRepository(Post::class)->find($id);
     
         if (!$post) {
-            return new Response('Post not found', Response::HTTP_NOT_FOUND);
+            return new Response('Post non trouvé', Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $security->getUser();
+
+        // Vérifier si l'utilisateur actuel est le propriétaire du post
+        if (!$security->isGranted('ROLE_ADMIN') && $user !== $post->getUser()) {
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
         }
     
         $post->setDescription($data["description"]);
@@ -145,13 +154,20 @@ class PostController extends AbstractController
         description: 'supprime le post corspondant a son id'
     )]
     #[OA\Tag(name: 'Posts')]
-    public function deletePost(ManagerRegistry $doctrine, int $id): Response
+    public function deletePost(ManagerRegistry $doctrine, int $id, Security $security): Response
     {
         $entityManager = $doctrine->getManager();
         $post = $entityManager->getRepository(Post::class)->find($id);
 
         if (!$post) {
-            return new Response('Post not found');
+            return new Response('Post non trouvé');
+        }
+
+        $user = $security->getUser();
+
+        // Vérifier si l'utilisateur actuel est le propriétaire du post
+        if (!$security->isGranted('ROLE_ADMIN') && $user !== $post->getUser()) {
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
         }
 
         $entityManager->remove($post);
