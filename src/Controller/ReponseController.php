@@ -11,8 +11,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Nelmio\ApiDocBundle\Annotation\Model;
+use Symfony\Component\Security\Core\Security;
 use App\Entity\User;
-use App\Entity\Post;
 use App\Entity\Reponse;
 use OpenApi\Attributes as OA;
 
@@ -28,6 +28,7 @@ class ReponseController extends AbstractController
     }
 
     #[Route('/api/reponse', methods: ['GET'])]
+    #[Security(name: null)]
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
@@ -47,6 +48,7 @@ class ReponseController extends AbstractController
 
 
     #[Route('/api/reponse/{id}', methods: ['GET'])]
+    #[Security(name: null)]
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,

@@ -30,6 +30,7 @@ class CommentaireController extends AbstractController
     }
 
     #[Route('/api/commentaire', methods: ['GET'])]
+    #[Security(name: null)]
     #[OA\Tag(name: 'Commentaires')]
     #[OA\Response(
         response: 200,
@@ -49,6 +50,7 @@ class CommentaireController extends AbstractController
 
 
     #[Route('/api/commentaire/{id}', methods: ['GET'])]
+    #[Security(name: null)]
     #[OA\Tag(name: 'Commentaires')]
     #[OA\Response(
         response: 200,
