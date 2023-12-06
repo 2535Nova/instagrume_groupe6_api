@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Nelmio\ApiDocBundle\Annotation\Model;
-use Symfony\Component\Security\Core\Security;
+use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
 use App\Entity\Post;
 use App\Entity\User;
 use OpenApi\Attributes as OA;
@@ -25,7 +25,7 @@ class LikeController extends AbstractController
     }
 
     #[Route('/api/like', methods: ['GET'])]
-    #[Security(name: null)]
+    #[AnnotationSecurity(name: null)]
     #[OA\Tag(name: 'Likes')]
     #[OA\Response(
         response: 200,

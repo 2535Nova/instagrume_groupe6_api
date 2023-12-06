@@ -14,8 +14,7 @@ use Nelmio\ApiDocBundle\Annotation\Model;
 use Symfony\Component\Security\Core\Security;
 use App\Entity\User;
 use App\Entity\Post;
-
-
+use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
 use OpenApi\Attributes as OA;
 
 
@@ -30,7 +29,7 @@ class CommentaireController extends AbstractController
     }
 
     #[Route('/api/commentaire', methods: ['GET'])]
-    #[Security(name: null)]
+    #[AnnotationSecurity(name: null)]
     #[OA\Tag(name: 'Commentaires')]
     #[OA\Response(
         response: 200,
@@ -50,7 +49,7 @@ class CommentaireController extends AbstractController
 
 
     #[Route('/api/commentaire/{id}', methods: ['GET'])]
-    #[Security(name: null)]
+    #[AnnotationSecurity(name: null)]
     #[OA\Tag(name: 'Commentaires')]
     #[OA\Response(
         response: 200,
