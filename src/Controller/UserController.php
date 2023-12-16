@@ -134,12 +134,17 @@ class UserController extends AbstractController
     #[OA\Tag(name: 'utilisateurs')]
     public function getAllUsers(ManagerRegistry $doctrine)
     {
-
         $entityManager = $doctrine->getManager();
         $users = $entityManager->getRepository(User::class)->findAll();
-
-        return new Response($this->jsonConverter->encodeToJson($users));
+    
+        $usersArray = [];
+        foreach ($users as $user) {
+            $usersArray[] = $user->toArray();
+        }
+    
+        return new Response($this->jsonConverter->encodeToJson($usersArray));
     }
+    
 
     #[Route('/api/inscription', methods: ['POST'])]
     #[Security(name: null)]
