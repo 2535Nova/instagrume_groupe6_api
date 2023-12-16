@@ -70,6 +70,13 @@ class Like
 
         return $this;
     }
-
-
+    // Dans votre entité Like
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'isLike' => $this->isIslike(),
+            // Ajoutez d'autres champs nécessaires
+        ];
+    }
 }

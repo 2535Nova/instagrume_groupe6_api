@@ -16,6 +16,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\User;
 use App\Entity\Reponse;
 use OpenApi\Attributes as OA;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 
 class ReponseController extends AbstractController
@@ -39,12 +41,21 @@ class ReponseController extends AbstractController
             items: new OA\Items(ref: new Model(type: Reponse::class))
         )
     )]
-    public function getAllPosts(ManagerRegistry $doctrine): Response
+    public function getAllReponses(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
-        $reponse = $entityManager->getRepository(Reponse::class)->findAll();
+        $reponses = $entityManager->getRepository(Reponse::class)->findAll();
 
-        return new Response($this->jsonConverter->encodeToJson($reponse));
+        // Avant de renvoyer la réponse JSON
+        $responseData = array_map(function ($reponse) {
+            return [
+                'content' => $reponse->getContent(),
+                'date' => $reponse->getDate()->format('Y-m-d H:i:s'),
+                // ... autres données que vous souhaitez inclure
+            ];
+        }, $reponses);
+
+        return $this->json($responseData, Response::HTTP_OK);
     }
 
 
@@ -59,16 +70,23 @@ class ReponseController extends AbstractController
             items: new OA\Items(ref: new Model(type: Reponse::class))
         )
     )]
-    public function getCommentaireById(int $id, ManagerRegistry $doctrine): Response
+    public function getReponseById(int $id, ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
         $reponse = $entityManager->getRepository(Reponse::class)->find($id);
 
         if (!$reponse) {
-            return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
+            return new JsonResponse(['error' => 'Reponse non trouvée.'], Response::HTTP_NOT_FOUND);
         }
 
-        return new JsonResponse($this->jsonConverter->encodeToJson($reponse));
+        // Avant de renvoyer la réponse JSON
+        $responseData = [
+            'content' => $reponse->getContent(),
+            'date' => $reponse->getDate()->format('Y-m-d H:i:s'),
+            // ... autres données que vous souhaitez inclure
+        ];
+
+        return $this->json($responseData, Response::HTTP_OK);
     }
 
 
@@ -93,7 +111,7 @@ class ReponseController extends AbstractController
             items: new OA\Items(ref: new Model(type: Reponse::class))
         )
     )]
-    public function addCommentaire(Request $request, ManagerRegistry $doctrine): Response
+    public function addReponse(Request $request, ManagerRegistry $doctrine, SerializerInterface $serializer): Response
     {
         $data = json_decode($request->getContent(), true);
 
@@ -111,7 +129,8 @@ class ReponseController extends AbstractController
         $reponse->setContent($data["content"]);
 
         // Définir la date et l'heure actuelles
-        $reponse->setDate(new \DateTime());
+
+        $reponse->setDate(new \DateTime('now', new \DateTimeZone('Europe/Paris')));
 
         $reponse->setCommentaire($commentaire);
 
@@ -119,7 +138,18 @@ class ReponseController extends AbstractController
         $entityManager->persist($reponse);
         $entityManager->flush();
 
-        return new JsonResponse($this->jsonConverter->encodeToJson($reponse), Response::HTTP_CREATED);
+
+
+        // Utilisez le Serializer pour sérialiser l'entité Reponse en JSON
+        $jsonContent = $serializer->serialize($reponse, 'json', [
+            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
+                return $object->getId();
+            },
+            'datetime_format' => 'Y-m-d H:i:s', // Format de date
+        ]);
+
+        // Retournez la réponse JSON
+        return new JsonResponse($jsonContent, Response::HTTP_CREATED, [], true);
     }
 
 
@@ -143,35 +173,44 @@ class ReponseController extends AbstractController
             items: new OA\Items(ref: new Model(type: Reponse::class))
         )
     )]
-    public function updateCommentaire(int $id, Request $request, ManagerRegistry $doctrine, Security $security): Response
-{
-    $entityManager = $doctrine->getManager();
-    $reponse = $entityManager->getRepository(Reponse::class)->find($id);
+    public function updateReponse(int $id, Request $request, ManagerRegistry $doctrine, Security $security,SerializerInterface $serializer): Response
+    {
+        $entityManager = $doctrine->getManager();
+        $reponse = $entityManager->getRepository(Reponse::class)->find($id);
 
-    if (!$reponse) {
-        return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
+        if (!$reponse) {
+            return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $user = $security->getUser();
+
+        // Vérifier si l'utilisateur actuel est le propriétaire du reponse
+        if (!$security->isGranted('ROLE_ADMIN') && $user !== $reponse->getUser()) {
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true);
+
+        // Mettez à jour les propriétés du commentaire en fonction des données de la requête
+        $reponse->setContent($data["content"]);
+        // Définir la date et l'heure actuelles
+        $reponse->setDate(new \DateTime('now', new \DateTimeZone('Europe/Paris')));
+
+        // Enregistrez les modifications
+        $entityManager->flush();
+
+        // Utilisez le Serializer pour sérialiser l'entité Reponse en JSON
+        $jsonContent = $serializer->serialize($reponse, 'json', [
+            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
+                return $object->getId();
+            },
+            'datetime_format' => 'Y-m-d H:i:s', // Format de date
+        ]);
+
+        // Retournez la réponse JSON
+        return new JsonResponse($jsonContent, Response::HTTP_CREATED, [], true);
     }
 
-    $user = $security->getUser();
-
-    // Vérifier si l'utilisateur actuel est le propriétaire du reponse
-    if (!$security->isGranted('ROLE_ADMIN') && $user !== $reponse->getUser()) {
-        return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
-    }
-
-    $data = json_decode($request->getContent(), true);
-
-    // Mettez à jour les propriétés du commentaire en fonction des données de la requête
-    $reponse->setContent($data["content"]);
-    // Définir la date et l'heure actuelles
-    $reponse->setDate(new \DateTime());
-
-    // Enregistrez les modifications
-    $entityManager->flush();
-
-    return new JsonResponse($this->jsonConverter->encodeToJson($reponse));
-}
-    
 
 
 

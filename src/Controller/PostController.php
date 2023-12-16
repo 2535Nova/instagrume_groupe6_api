@@ -40,9 +40,17 @@ class PostController extends AbstractController
     {
         $entityManager = $doctrine->getManager();
         $posts = $entityManager->getRepository(Post::class)->findAll();
-
-        return new Response($this->jsonConverter->encodeToJson($posts));
+    
+        // Utiliser votre propre JsonConverter pour sérialiser les objets en JSON
+        $jsonPosts = $this->jsonConverter->encodeToJson(
+            array_map(fn (Post $post) => $post->toArray(), $posts)
+        );
+    
+        return new JsonResponse($jsonPosts, Response::HTTP_OK);
     }
+    
+
+    
 
     #[Route('/api/posts/{id}', methods: ['GET'])]
     #[AnnotationSecurity(name: null)]
@@ -83,20 +91,53 @@ class PostController extends AbstractController
     #[OA\Tag(name: 'Posts')]
     public function createPost(ManagerRegistry $doctrine): Response
     {
+        $input = (array) json_decode(file_get_contents('php://input'), true);
+
+        // Vérifiez la présence des champs nécessaires
+        if (empty($input["user_id"]) || empty($input["image"]) || empty($input["description"])) {
+            return $this->unprocessableEntityResponse();
+        }
+
         $request = Request::createFromGlobals();
         $data = json_decode($request->getContent(), true);
-    
-        $entityManager = $doctrine->getManager();
-    
+
         // Récupérez l'utilisateur
+        $entityManager = $doctrine->getManager();
         $user = $entityManager->getRepository(User::class)->find($data["user_id"]);
+
+
+        $base64_image = $input["image"];
+        
+        // Trouver l'extension du format d'image depuis la chaîne base64
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
+            $imageFormat = $matches[1];
+        
+            // Générer un nom de fichier unique en utilisant le nom d'utilisateur
+            $imageName = $user->getUsername() . "Post". $data->getId() . "." . $imageFormat;
+            $destinationPath = "./../public/images/" . $imageName;
+            
+        
+            // Extrait les données de l'image (après la virgule)
+            $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
+        
+            // Décode la chaîne base64 en binaire
+            $binaryData = base64_decode($imageData);
+        
+            if ($binaryData !== false) {
+                // Enregistre l'image sur le serveur
+                file_put_contents($destinationPath, $binaryData);
+            }
+        } else {
+            return new Response('Image invalides', 401);
+        }
+
     
         // Créez un nouveau post
         $post = new Post();
         $post->setDescription($data["description"]);
         $post->setIslock($data["islock"]);
         $post->setUser($user);
-        $post->setImage($data["image"]);
+        $post->setImage($imageName);
     
         // Enregistrez le nouveau post
         $entityManager->persist($post);
@@ -174,5 +215,13 @@ class PostController extends AbstractController
         $entityManager->flush();
 
         return new Response(null, Response::HTTP_NO_CONTENT);
+    }
+    private function unprocessableEntityResponse()
+    {
+        $response['status_code_header'] = $_SERVER['SERVER_PROTOCOL'] . ' 422 Unprocessable Entity';
+        $response['body'] = json_encode([
+            'error' => 'Données invalid'
+        ]);
+        return $response;
     }
 }

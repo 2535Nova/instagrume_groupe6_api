@@ -19,7 +19,9 @@ use OpenApi\Attributes as OA;
 
 use App\Service\JsonConverter;
 use App\Entity\User;
-use Symfony\Component\Security\Core\Role\Role;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
 
 class UserController extends AbstractController
 {
@@ -105,8 +107,10 @@ class UserController extends AbstractController
         content: new OA\JsonContent(ref: new Model(type: User::class))
     )]
     #[OA\Tag(name: 'utilisateurs')]
-    public function getUtilisateurByusername(ManagerRegistry $doctrine)
+    public function getUtilisateurByusername(ManagerRegistry $doctrine, Request $request)
     {
+
+
         $request = Request::createFromGlobals();
         $username = $request->query->get('username');
         $entityManager = $doctrine->getManager();
@@ -130,6 +134,7 @@ class UserController extends AbstractController
     #[OA\Tag(name: 'utilisateurs')]
     public function getAllUsers(ManagerRegistry $doctrine)
     {
+
         $entityManager = $doctrine->getManager();
         $users = $entityManager->getRepository(User::class)->findAll();
 
@@ -168,29 +173,28 @@ class UserController extends AbstractController
         // Trouver l'extension du format d'image depuis la chaîne base64
         if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
             $imageFormat = $matches[1];
-        
+
             // Générer un nom de fichier unique en utilisant le nom d'utilisateur
             $imageName = $input["username"] . "." . $imageFormat;
             $destinationPath = "./../public/images/" . $imageName;
-            
-        
+
+
             // Extrait les données de l'image (après la virgule)
             $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
-        
+
             // Décode la chaîne base64 en binaire
             $binaryData = base64_decode($imageData);
-        
+
             if ($binaryData !== false) {
                 // Enregistre l'image sur le serveur
                 file_put_contents($destinationPath, $binaryData);
             }
         } else {
-            // Gestion de l'erreur si le format de l'image n'est pas correct
-            // ... (par exemple, renvoyer une réponse d'erreur appropriée)
+            return new Response('Image invalides', 401);
         }
-        
-        
-        
+
+
+
 
         $entityManager = $doctrine->getManager();
         $user = new User();
@@ -204,15 +208,13 @@ class UserController extends AbstractController
 
         // Utilisez la classe Response de Symfony pour construire la réponse HTTP
         return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_CREATED);
-    
-        
     }
 
-    
+
+
 
     #[Route('/api/users/{id}', methods: ['PUT'])]
     #[OA\Put(description: 'Mise à jour des informations de l\'utilisateur')]
-    #[OA\Put(security: ["oauth2" => ["ROLE_USER", "ROLE_ADMIN"]])]
     #[OA\Response(
         response: 200,
         description: 'L\'utilisateur mis à jour',
@@ -223,68 +225,59 @@ class UserController extends AbstractController
         content: new OA\JsonContent(
             type: 'object',
             properties: [
-                new OA\Property(property: 'username', type: 'string'),
                 new OA\Property(property: 'password', type: 'string'),
                 new OA\Property(property: 'avatar', type: 'string'),
-                new OA\Property(property: 'roles', type: 'string',default: '["ROLE_USER"]'),
-                new OA\Property(property: 'ban', type: 'boolean',default: 'false')
-            ]
+                new OA\Property(property: 'roles', type: 'string', default: ["ROLE_USER"]),
+                new OA\Property(property: 'ban', type: 'boolean', default: 'false')
+            ],
+            required: ['password']
         )
     )]
     #[OA\Tag(name: 'utilisateurs')]
     public function putUser(ManagerRegistry $doctrine, int $id)
     {
         $input = (array) json_decode(file_get_contents('php://input'), true);
+        $jsonError = json_last_error();
+
+        if ($jsonError !== JSON_ERROR_NONE) {
+            return $this->json(['error' => 'Erreur JSON : ' . json_last_error_msg()], Response::HTTP_BAD_REQUEST);
+        }
+
         $entityManager = $doctrine->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
-    
+
         // Vérifiez la présence des champs nécessaires
-        if (empty($input["username"]) || empty($input["roles"]) || empty($input["password"]) || empty($input["ban"])) {
-            return $this->unprocessableEntityResponse();
+        if (empty($input["password"])) {
+            return $this->json(['error' => 'Le mot de passe est requis.'], Response::HTTP_BAD_REQUEST);
         }
-        $base64_image = $input["avatar"];
-    
-        // Trouver l'extension du format d'image depuis la chaîne base64
-        if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
-            $imageFormat = $matches[1];
-        
-            // Générer un nom de fichier unique en utilisant le nom d'utilisateur
-            $imageName = $input["username"] . "." . $imageFormat;
-            $destinationPath = "./../public/images/" . $imageName;
-    
-            // Supprimer l'image existante s'il y en a une
-            $existingImagePath = "./../public/images/" . $user->getAvatar();
-            if (file_exists($existingImagePath)) {
-                unlink($existingImagePath);
+
+        // Vérifiez si la clé 'avatar' existe dans le tableau $input
+        if (isset($input['avatar'])) {
+            // Votre logique pour gérer 'avatar' s'il est présent
+            $base64_image = $input["avatar"];
+
+            // Trouver l'extension du format d'image depuis la chaîne base64
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
+                $imageFormat = $matches[1];
+                // ... (le reste de votre logique pour gérer l'avatar)
+            } else {
+                // Gestion de l'erreur si le format de l'image n'est pas correct
+                // ... (par exemple, renvoyer une réponse d'erreur appropriée)
             }
-        
-            // Extrait les données de l'image (après la virgule)
-            $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
-        
-            // Décode la chaîne base64 en binaire
-            $binaryData = base64_decode($imageData);
-        
-            if ($binaryData !== false) {
-                // Enregistre la nouvelle image sur le serveur
-                file_put_contents($destinationPath, $binaryData);
-            }
-        } else {
-            // Gestion de l'erreur si le format de l'image n'est pas correct
-            // ... (par exemple, renvoyer une réponse d'erreur appropriée)
         }
-        
-        $user->setUsername($input["username"]);
+
+
         $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
-        $user->setAvatar($imageName); // Utilisez le nom généré pour l'image
         $user->setRoles($input["roles"]);
         $user->setBan($input["ban"]);
         $entityManager->persist($user);
         $entityManager->flush();
-    
+
+
         // Utilisez la classe Response de Symfony pour construire la réponse HTTP
-        return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_CREATED);
+        return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_OK);
     }
-    
+
 
 
     #[Route('/api/users/{id}', methods: ['DELETE'])]

@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\Post;
 use App\Entity\User;
 use OpenApi\Attributes as OA;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class LikeController extends AbstractController
 {
@@ -27,7 +28,6 @@ class LikeController extends AbstractController
     }
 
     #[Route('/api/like', methods: ['GET'])]
-    #[AnnotationSecurity(name: null)]
     #[OA\Tag(name: 'Likes')]
     #[OA\Response(
         response: 200,
@@ -37,13 +37,19 @@ class LikeController extends AbstractController
             items: new OA\Items(ref: new Model(type: Like::class))
         )
     )]
-    public function getAllPosts(ManagerRegistry $doctrine): Response
+    public function getAllLike(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
         $likes = $entityManager->getRepository(Like::class)->findAll();
-
-        return new Response($this->jsonConverter->encodeToJson($likes));
+    
+        // Utiliser votre propre JsonConverter pour sérialiser les objets en JSON
+        $jsonLikes = $this->jsonConverter->encodeToJson(
+            array_map(fn (Like $like) => $like->toArray(), $likes)
+        );
+    
+        return new JsonResponse($jsonLikes, Response::HTTP_OK);
     }
+    
 
     #[Route('/api/like/{id}', methods: ['PUT'])]
     #[OA\Tag(name: 'Likes')]

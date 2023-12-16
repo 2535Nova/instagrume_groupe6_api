@@ -7,7 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use OpenApi\Annotations\Response;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 #[ORM\Entity(repositoryClass: CommentaireRepository::class)]
 class Commentaire
@@ -149,6 +149,18 @@ class Commentaire
         $this->post = $post;
 
         return $this;
+    }
+
+    public function normalize(NormalizerInterface $normalizer): array
+    {
+        return [
+            'id' => $this->id,
+            'user' => $this->user->getId(), // Vous pouvez personnaliser cela selon vos besoins
+            'post' => $this->post->getId(), // Idem
+            'content' => $this->content,
+            'date' => $this->date->format("Y-m-d H:i:s"),
+            // ... d'autres propriétés
+        ];
     }
 
 

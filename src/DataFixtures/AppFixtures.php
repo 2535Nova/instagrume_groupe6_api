@@ -94,6 +94,7 @@ class AppFixtures extends Fixture
         $commantaire->setPostId($Post);
         $commantaire->setContent("ceci est un test");
         $date = new \DateTime("2000-02-02");
+        $date->setTimezone(new \DateTimeZone("UTC"));
         $commantaire->setDate($date);
         $manager->persist($commantaire);
 
@@ -102,6 +103,7 @@ class AppFixtures extends Fixture
         $commantaire1->setPostId($Post3);
         $commantaire1->setContent("ceci est le deuxieme commantair");
         $date1 = new \DateTime("2050-08-10");
+        $date1->setTimezone(new \DateTimeZone("UTC"));
         $commantaire1->setDate($date1);
         $manager->persist($commantaire1);
 
@@ -110,6 +112,7 @@ class AppFixtures extends Fixture
         $commantaire2->setPostId($Post3);
         $commantaire2->setContent("ceci est un test de réponse de commantair");
         $date2 = new \DateTime("2055-08-10");
+        $date2->setTimezone(new \DateTimeZone("UTC"));
         $commantaire2->setDate($date2);
         $manager->persist($commantaire2);
 
