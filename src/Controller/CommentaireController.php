@@ -16,7 +16,9 @@ use App\Entity\User;
 use App\Entity\Post;
 use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
 use OpenApi\Attributes as OA;
-
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Serializer;
 
 class CommentaireController extends AbstractController
 {
@@ -38,22 +40,11 @@ class CommentaireController extends AbstractController
             items: new OA\Items(ref: new Model(type: Commentaire::class))
         )
     )]
-    public function getAllCommentaires(ManagerRegistry $doctrine): Response
+    public function getAllCommentaire(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
         $commentaires = $entityManager->getRepository(Commentaire::class)->findAll();
-    
-        // Avant de renvoyer la réponse JSON
-        $responseData = [];
-        foreach ($commentaires as $commentaire) {
-            $responseData[] = [
-                'content' => $commentaire->getContent(),
-                'date' => $commentaire->getDate()->format('Y-m-d H:i:s'),
-                // ... autres données que vous souhaitez inclure
-            ];
-        }
-    
-        return $this->json($responseData, Response::HTTP_OK);
+        return new Response($this->jsonConverter->encodeToJson($commentaires));
     }
 
     #[Route('/api/commentaire/{id}', methods: ['GET'])]
@@ -71,18 +62,18 @@ class CommentaireController extends AbstractController
     {
         $entityManager = $doctrine->getManager();
         $commentaire = $entityManager->getRepository(Commentaire::class)->find($id);
-    
+
         if (!$commentaire) {
             return new JsonResponse(['error' => 'Commentaire non trouvé.'], Response::HTTP_NOT_FOUND);
         }
-    
+
         // Avant de renvoyer la réponse JSON
         $responseData = [
             'content' => $commentaire->getContent(),
             'date' => $commentaire->getDate()->format('Y-m-d H:i:s'),
             // ... autres données que vous souhaitez inclure
         ];
-    
+
         return $this->json($responseData, Response::HTTP_OK);
     }
 
@@ -122,7 +113,7 @@ class CommentaireController extends AbstractController
 
         // Créer une nouvelle instance de l'entité Commentaire
         $commentaire = new Commentaire();
-        $commentaire->setUserId($user);
+        $commentaire->setUsers($user);
         $commentaire->setContent($data["content"]);
 
         // Définir la date et l'heure actuelles
@@ -188,7 +179,7 @@ class CommentaireController extends AbstractController
         return $this->json($commentaire, Response::HTTP_CREATED, [], ['datetime_format' => 'Y-m-d H:i:s']);
     }
 
-    
+
 
 
 

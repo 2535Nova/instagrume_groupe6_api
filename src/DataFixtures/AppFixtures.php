@@ -90,7 +90,7 @@ class AppFixtures extends Fixture
         $manager->persist($Like3);
 
         $commantaire = new Commentaire();
-        $commantaire->setUserId($User);
+        $commantaire->setUsers($User);
         $commantaire->setPostId($Post);
         $commantaire->setContent("ceci est un test");
         $date = new \DateTime("2000-02-02");
@@ -99,7 +99,7 @@ class AppFixtures extends Fixture
         $manager->persist($commantaire);
 
         $commantaire1 = new Commentaire();
-        $commantaire1->setUserId($User);
+        $commantaire1->setUsers($User);
         $commantaire1->setPostId($Post3);
         $commantaire1->setContent("ceci est le deuxieme commantair");
         $date1 = new \DateTime("2050-08-10");
@@ -108,7 +108,7 @@ class AppFixtures extends Fixture
         $manager->persist($commantaire1);
 
         $commantaire2 = new Commentaire();
-        $commantaire2->setUserId($Admin);
+        $commantaire2->setUsers($Admin);
         $commantaire2->setPostId($Post3);
         $commantaire2->setContent("ceci est un test de réponse de commantair");
         $date2 = new \DateTime("2055-08-10");
