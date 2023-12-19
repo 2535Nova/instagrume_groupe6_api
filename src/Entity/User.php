@@ -244,6 +244,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'username' => $this->getUsername(),
+            // Ajoutez d'autres propriétés que vous souhaitez inclure
+        ];
+    }
 
-    
+    public function getCommentaire(): ?Commentaire
+    {
+        return $this->commentaire;
+    }
+
+    public function setCommentaire(?Commentaire $commentaire): static
+    {
+        $this->commentaire = $commentaire;
+
+        return $this;
+    }
+
 }
