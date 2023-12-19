@@ -9,24 +9,23 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
-use Nelmio\ApiDocBundle\Annotation\Model;
-use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\Post;
 use App\Entity\User;
 use OpenApi\Attributes as OA;
-use Symfony\Component\Serializer\Serializer;
-use Symfony\Component\Serializer\Encoder\JsonEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class LikeController extends AbstractController
 {
     private $jsonConverter;
+    private $serializer;
 
-    public function __construct(JsonConverter $jsonConverter)
+    public function __construct(JsonConverter $jsonConverter, SerializerInterface $serializer)
     {
         $this->jsonConverter = $jsonConverter;
+        $this->serializer = $serializer;
     }
 
     #[Route('/api/like', methods: ['GET'])]
@@ -35,45 +34,58 @@ class LikeController extends AbstractController
         response: 200,
         description: 'La liste de tous les likes',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Like::class))
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "post_id", type: "integer"),
+                new OA\Property(property: "isLike", type: "boolean"),
+            ]
         )
     )]
-    public function getAllLike(ManagerRegistry $doctrine): Response
+    public function getAllLikes(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
         $likes = $entityManager->getRepository(Like::class)->findAll();
 
-        // Avant de renvoyer la réponse JSON
-        $responseData = [];
+        // Récupérer les entités User et Post liées à chaque like
+        $likeData = [];
         foreach ($likes as $like) {
-            $responseData[] = [
+            // Charger explicitement les entités User et Post si elles sont configurées en lazy loading
+            $user = $like->getUser();
+            $post = $like->getPost();
+
+            $likeData[] = [
                 'id' => $like->getId(),
-                'user_id' => $like->getUser(),
-                'date' => $like->date('Y-m-d H:i:s'),
-                'post_id' => $like->getPost(),
-                'islike'=> $like->isIslike(),
-                // ... autres données que vous souhaitez inclure
+                'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+                'post_id' => $post ? $post->getId() : null, // Ajouter l'ID du post
+                'islike' => $like->isIslike(),
             ];
         }
 
-        $serializer = new Serializer([new ObjectNormalizer()], [new JsonEncoder()]);
-        $jsonObject = $serializer->serialize($responseData, 'json', [
-            'circular_reference_handler' => function ($responseData) {
-            }
-        ]);
-        return $this->json($jsonObject, Response::HTTP_OK);
+        $data = $this->serializer->serialize(
+            $likeData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['like']]
+        );
+
+        return new Response($data);
     }
 
 
     #[Route('/api/like/{id}', methods: ['PUT'])]
     #[OA\Tag(name: 'Likes')]
     #[OA\Response(
-        response: 200,
-        description: 'Like mis à jour avec succès',
+        response: 201,
+        description: 'Like mise a jour avec succès',
         content: new OA\JsonContent(
             type: 'object',
-            example: '{"message": "Like mis à jour avec succès"}'
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "post_id", type: "integer"),
+                new OA\Property(property: "isLike", type: "boolean"),
+            ]
         )
     )]
     #[OA\RequestBody(
@@ -160,8 +172,14 @@ class LikeController extends AbstractController
         description: 'Like créé avec succès',
         content: new OA\JsonContent(
             type: 'object',
-            example: '{"message": "Like créé avec succès"}'
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "post_id", type: "integer"),
+                new OA\Property(property: "isLike", type: "boolean"),
+            ]
         )
+        
     )]
     public function createLike(Request $request, ManagerRegistry $doctrine): Response
     {

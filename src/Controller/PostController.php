@@ -9,58 +9,86 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
-use Nelmio\ApiDocBundle\Annotation\Model;
-use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\User;
 use OpenApi\Attributes as OA;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 class PostController extends AbstractController
 {
-    private $jsonConverter;
 
-    public function __construct(JsonConverter $jsonConverter)
+    private $jsonConverter;
+    private $serializer;
+
+    public function __construct(JsonConverter $jsonConverter, SerializerInterface $serializer)
     {
         $this->jsonConverter = $jsonConverter;
+        $this->serializer = $serializer;
     }
 
     #[Route('/api/posts', methods: ['GET'])]
-    #[AnnotationSecurity(name: null)]
     #[OA\Tag(name: 'Posts')]
     #[OA\Response(
         response: 200,
         description: 'La liste de tous les posts',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Post::class))
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "post_id", type: "integer"),
+                new OA\Property(property: "isLike", type: "boolean"),
+            ]
         )
+        
     )]
     public function getAllPosts(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
         $posts = $entityManager->getRepository(Post::class)->findAll();
-    
-        // Utiliser votre propre JsonConverter pour sérialiser les objets en JSON
-        $jsonPosts = $this->jsonConverter->encodeToJson(
-            array_map(fn (Post $post) => $post->toArray(), $posts)
+
+        // Récupérer les entités User liées à chaque post
+        $postData = [];
+        foreach ($posts as $post) {
+            // Charger explicitement l'entité User si elle est configurée en lazy loading
+            $user = $post->getUser();
+
+            $postData[] = [
+                'id' => $post->getId(),
+                'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+                'image' => $post->getImage(),
+                'islock' => $post->isIslock(),
+                'description' => $post->getDescription(),
+            ];
+        }
+
+        $data = $this->serializer->serialize(
+            $postData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['post']]
         );
-    
-        return new JsonResponse($jsonPosts, Response::HTTP_OK);
+
+        return new Response($data);
     }
     
 
     
 
     #[Route('/api/posts/{id}', methods: ['GET'])]
-    #[AnnotationSecurity(name: null)]
     #[OA\Tag(name: 'Posts')]
     #[OA\Response(
         response: 200,
-        description: 'Retourne le post corspondant a son id',
+        description: 'Le Post selon un ID',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Post::class))
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "post_id", type: "integer"),
+                new OA\Property(property: "isLike", type: "boolean"),
+            ]
         )
     )]
     public function getPostById(ManagerRegistry $doctrine, int $id): Response
@@ -69,10 +97,29 @@ class PostController extends AbstractController
         $post = $entityManager->getRepository(Post::class)->find($id);
 
         if (!$post) {
-            return new Response("Post non trouvé");
+            // Gérer le cas où aucun post n'est trouvé pour l'ID donné
+            return new Response('Post non trouvé', 404);
         }
 
-        return new Response($this->jsonConverter->encodeToJson($post));
+        // Charger explicitement l'entité User si elle est configurée en lazy loading
+        $user = $post->getUser();
+
+        // Récupérer les données spécifiques du post
+        $postData = [
+            'id' => $post->getId(),
+            'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+            'image' => $post->getImage(),
+            'islock' => $post->isIslock(),
+            'description' => $post->getDescription(),
+        ];
+
+        $data = $this->serializer->serialize(
+            $postData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['post']]
+        );
+
+        return new Response($data);
     }
 
     #[Route('/api/posts', methods: ['POST'])]
@@ -89,6 +136,19 @@ class PostController extends AbstractController
         )
     )]
     #[OA\Tag(name: 'Posts')]
+    #[OA\Response(
+        response: 201,
+        description: 'Post ajouté avec succès',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "post_id", type: "integer"),
+                new OA\Property(property: "isLike", type: "boolean"),
+            ]
+        )
+    )]
     public function createPost(ManagerRegistry $doctrine): Response
     {
         $input = (array) json_decode(file_get_contents('php://input'), true);
@@ -159,6 +219,20 @@ class PostController extends AbstractController
         )
     )]
     #[OA\Tag(name: 'Posts')]
+    #[OA\Response(
+        response: 200,
+        description: 'Post mise a jour avec succès',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "post_id", type: "integer"),
+                new OA\Property(property: "isLike", type: "boolean"),
+            ]
+        )
+    )]
+    
     public function updatePost(ManagerRegistry $doctrine, int $id, Security $security): Response
     {
         $request = Request::createFromGlobals();
@@ -191,10 +265,11 @@ class PostController extends AbstractController
 
     #[Route('/api/posts/{id}', methods: ['DELETE'])]
     #[OA\Response(
-        response: 200,
-        description: 'supprime le post corspondant a son id'
+        response: 204,
+        description: 'Post supprimé avec succès'
     )]
     #[OA\Tag(name: 'Posts')]
+    
     public function deletePost(ManagerRegistry $doctrine, int $id, Security $security): Response
     {
         $entityManager = $doctrine->getManager();
