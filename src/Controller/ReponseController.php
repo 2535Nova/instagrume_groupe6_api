@@ -10,65 +10,118 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Nelmio\ApiDocBundle\Annotation\Model;
-use Nelmio\ApiDocBundle\Annotation\Security as AnnotationSecurity;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\User;
 use App\Entity\Reponse;
 use OpenApi\Attributes as OA;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Serializer\SerializerInterface;
 
 
 class ReponseController extends AbstractController
 {
 
     private $jsonConverter;
+    private $serializer;
 
-    public function __construct(JsonConverter $jsonConverter)
+    public function __construct(JsonConverter $jsonConverter, SerializerInterface $serializer)
     {
         $this->jsonConverter = $jsonConverter;
+        $this->serializer = $serializer;
     }
 
     #[Route('/api/reponse', methods: ['GET'])]
-    #[AnnotationSecurity(name: null)]
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
         description: 'La liste de tous les Reponse',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Reponse::class))
-        )
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "commentaire_id", type: "integer"),
+                new OA\Property(property: "content", type: "string"),
+                new OA\Property(property: "date",type: "string", format: "date-time"),
+            ]
+        )  
     )]
-    public function getAllPosts(ManagerRegistry $doctrine): Response
+    public function getAllReponse(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
-        $reponse = $entityManager->getRepository(Reponse::class)->findAll();
+        $reponses = $entityManager->getRepository(Reponse::class)->findAll();
 
-        return new Response($this->jsonConverter->encodeToJson($reponse));
+        // Récupérer les entités User liées à chaque réponse
+        $reponseData = [];
+        foreach ($reponses as $reponse) {
+            // Charger explicitement l'entité User si elle est configurée en lazy loading
+            $user = $reponse->getUser();
+            
+            $reponseData[] = [
+                'id' => $reponse->getId(),
+                'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+                'commentaire_id' => $reponse->getCommentaire()->getId(), // Ajouter l'ID du commentaire
+                'content' => $reponse->getContent(),
+                'date' => $reponse->getDate(),
+            ];
+        }
+
+        $data = $this->serializer->serialize(
+            $reponseData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['reponse']]
+        );
+
+        return new Response($data);
     }
 
 
     #[Route('/api/reponse/{id}', methods: ['GET'])]
-    #[AnnotationSecurity(name: null)]
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
-        description: 'Récupérer une reponse par ID',
+        description: 'La Reponse selon un ID',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Reponse::class))
-        )
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "commentaire_id", type: "integer"),
+                new OA\Property(property: "content", type: "string"),
+                new OA\Property(property: "date",type: "string", format: "date-time"),
+            ]
+        )  
     )]
-    public function getCommentaireById(int $id, ManagerRegistry $doctrine): Response
+    public function getReponseById(ManagerRegistry $doctrine, int $id): Response
     {
         $entityManager = $doctrine->getManager();
         $reponse = $entityManager->getRepository(Reponse::class)->find($id);
 
         if (!$reponse) {
-            return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
+            // Gérer le cas où aucune réponse n'est trouvée pour l'ID donné
+            return new Response('Réponse non trouvée', 404);
         }
 
-        return new JsonResponse($this->jsonConverter->encodeToJson($reponse));
+        // Charger explicitement l'entité User si elle est configurée en lazy loading
+        $user = $reponse->getUser();
+
+        // Récupérer les données spécifiques de la réponse
+        $reponseData = [
+            'id' => $reponse->getId(),
+            'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+            'commentaire_id' => $reponse->getCommentaire()->getId(), // Ajouter l'ID du commentaire
+            'content' => $reponse->getContent(),
+            'date' => $reponse->getDate(),
+        ];
+
+        $data = $this->serializer->serialize(
+            $reponseData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['reponse']]
+        );
+
+        return new Response($data);
     }
 
 
@@ -86,12 +139,18 @@ class ReponseController extends AbstractController
     )]
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
-        response: 200,
-        description: 'Récupérer un commentaire par ID',
+        response: 201,
+        description: 'Reponse ajouté avec succès',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Reponse::class))
-        )
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "commentaire_id", type: "integer"),
+                new OA\Property(property: "content", type: "string"),
+                new OA\Property(property: "date",type: "string", format: "date-time"),
+            ]
+        )  
     )]
     public function addCommentaire(Request $request, ManagerRegistry $doctrine): Response
     {
@@ -137,11 +196,17 @@ class ReponseController extends AbstractController
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
-        description: 'Modifie une reponse par ID',
+        description: 'Reponse mise a jour avec succès',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Reponse::class))
-        )
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "commentaire_id", type: "integer"),
+                new OA\Property(property: "content", type: "string"),
+                new OA\Property(property: "date",type: "string", format: "date-time"),
+            ]
+        )  
     )]
     public function updateCommentaire(int $id, Request $request, ManagerRegistry $doctrine, Security $security): Response
 {
@@ -178,8 +243,8 @@ class ReponseController extends AbstractController
     #[Route('/api/reponse/{id}', methods: ['DELETE'])]
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
-        response: 200,
-        description: 'supprime une reponse par ID',
+        response: 204,
+        description: 'Reponse supprimé avec succès',
     )]
     public function deleteCommentaire(int $id, ManagerRegistry $doctrine, Security $security): Response
     {

@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use OpenApi\Annotations\Response;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: CommentaireRepository::class)]
 class Commentaire
@@ -15,25 +16,33 @@ class Commentaire
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(["commentaire"])]
     private ?int $id = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(["commentaire"])]
     private ?User $user = null;
 
     #[ORM\ManyToOne(inversedBy: 'commentaires')]
     #[ORM\JoinColumn(nullable: false)]
     #[ORM\JoinColumn(onDelete: "CASCADE")]
+    #[Groups(["commentaire"])]
     private ?Post $post = null;
 
 
     #[ORM\Column(length: 255)]
+    #[Groups(["commentaire"])]
     private ?string $content = null;
 
+    
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    #[Groups(['commentaire'])]
+    
     private ?\DateTimeInterface $date = null;
 
     #[ORM\OneToMany(mappedBy: 'commentaire', targetEntity: Reponse::class, orphanRemoval: true)]
+    #[Groups(["commentaire"])]
     private Collection $reponses;
 
     public function __construct()

@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Entity\Like;
+use App\Entity\Post;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,22 +21,24 @@ use OpenApi\Attributes as OA;
 
 use App\Service\JsonConverter;
 use App\Entity\User;
-use Symfony\Component\Security\Core\Role\Role;
+use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 
 class UserController extends AbstractController
 {
 
     private $jsonConverter;
     private $passwordHasher;
+    private $serializer;
 
-    public  function __construct(JsonConverter $jsonConverter, UserPasswordHasherInterface $passwordHasher)
+    public  function __construct(JsonConverter $jsonConverter, UserPasswordHasherInterface $passwordHasher, SerializerInterface $serializer)
     {
         $this->passwordHasher = $passwordHasher;
         $this->jsonConverter = $jsonConverter;
+        $this->serializer = $serializer;
     }
 
     #[Route('/api/login', methods: ['POST'])]
-    #[Security(name: null)]
     #[OA\Post(description: 'Connexion à l\'API')]
     #[OA\Response(
         response: 200,
@@ -116,6 +120,45 @@ class UserController extends AbstractController
         return new Response($this->jsonConverter->encodeToJson($user));
     }
 
+    #[Route('/api/users/{id}', methods: ['GET'])]
+    #[OA\Tag(name: 'utilisateurs')]
+    #[OA\Response(
+        response: 200,
+        description: 'Le User selon un ID',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(ref: new Model(type: User::class))
+        )
+    )]
+    public function getUserById(ManagerRegistry $doctrine, int $id): Response
+    {
+        $entityManager = $doctrine->getManager();
+        $user = $entityManager->getRepository(User::class)->find($id);
+
+        if (!$user) {
+            // Gérer le cas où aucun utilisateur n'est trouvé pour l'ID donné
+            return new Response('Utilisateur non trouvé', 404);
+        }
+
+        // Récupérer les données spécifiques de l'utilisateur
+        $userData = [
+            'id' => $user->getId(),
+            'username' => $user->getUsername(),
+            'roles' => $user->getRoles(),
+            'avatar' => $user->getAvatar(),
+            'ban' => $user->isBan(),
+            // Ajoutez d'autres champs si nécessaire
+        ];
+
+        $data = $this->serializer->serialize(
+            $userData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['user']]
+        );
+
+        return new Response($data);
+    }
+
 
     #[Route('/api/users', methods: ['GET'])]
     #[OA\Get(description: 'Retourne la liste de tous les utilisateurs')]
@@ -128,20 +171,130 @@ class UserController extends AbstractController
         )
     )]
     #[OA\Tag(name: 'utilisateurs')]
-    public function getAllUsers(ManagerRegistry $doctrine)
+    public function getAllUsers(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
         $users = $entityManager->getRepository(User::class)->findAll();
 
-        return new Response($this->jsonConverter->encodeToJson($users));
+        // Récupérer les données spécifiques de chaque utilisateur
+        $userData = [];
+        foreach ($users as $user) {
+            $userData[] = [
+                'id' => $user->getId(),
+                'username' => $user->getUsername(),
+                'roles' => $user->getRoles(),
+                'avatar' => $user->getAvatar(), // Assuming there is a getAvatar() method
+                'ban' => $user->isBan(),       // Assuming there is a getBan() method
+                // Ajoutez d'autres champs si nécessaire
+            ];
+        }
+
+        $data = $this->serializer->serialize(
+            $userData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['user']]
+        );
+
+        return new Response($data);
     }
 
+    #[Route('/api/users/{id}/posts', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne tous les commentaires liés à l\'utilisateur')]
+    #[OA\Response(
+        response: 200,
+        description: 'La liste de tous les commentaires liés à l\'utilisateur',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(ref: new Model(type: User::class))
+        )
+    )]
+    #[OA\Tag(name: 'utilisateurs')]
+    public function getUserComments(ManagerRegistry $doctrine, int $id, SerializerInterface $serializer): Response
+    {
+        $entityManager = $doctrine->getManager();
+        $user = $entityManager->getRepository(Post::class)->find($id);
+
+        if (!$user) {
+            return new Response('Utilisateur non trouvé', 404);
+        }
+
+        // Récupérer les commentaires associés à l'utilisateur
+        $posts = $user->getPosts();
+
+        // Construire un tableau de données à sérialiser
+        $commentData = [];
+        foreach ($posts as $post) {
+            $commentData[] = [
+                'id' => $post->getId(),
+                'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+                'image' => $post->getImage(),
+                'islock' => $post->isIslock(),
+                'description' => $post->getDescription(),
+                // Ajoutez d'autres champs si nécessaire
+            ];
+        }
+
+        // Utiliser le serializer pour convertir le tableau de données en JSON
+        $data = $serializer->serialize(
+            $commentData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['comment']]
+        );
+
+        return new Response($data);
+    }
+
+    #[Route('/api/users/{id}/like', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne tous les likes liés à l\'utilisateur')]
+    #[OA\Response(
+        response: 200,
+        description: 'La liste de tous les likes liés à l\'utilisateur',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(ref: new Model(type: Like::class))
+        )
+    )]
+    #[OA\Tag(name: 'utilisateurs')]
+    public function getUserLike(ManagerRegistry $doctrine, int $id, SerializerInterface $serializer): Response
+    {
+        $entityManager = $doctrine->getManager();
+        $user = $entityManager->getRepository(User::class)->find($id);
+    
+        if (!$user) {
+            return new Response('Utilisateur non trouvé', 404);
+        }
+    
+        // Récupérer les likes associés à l'utilisateur
+        $likes = $user->getLikes();
+    
+        // Construire un tableau de données à sérialiser
+        $likeData = [];
+        foreach ($likes as $like) {
+            $likeData[] = [
+                'id' => $like->getId(),
+                'user_id' => $user ? $user->getId(): null, // Ajouter l'ID de l'utilisateur
+                'post_id' => $like->getPost() ? $like->getPost()->getId() : null, // Ajouter l'ID du post
+                'islike' => $like->isIslike(),
+                // Ajoutez d'autres champs si nécessaire
+            ];
+        }
+    
+        // Utiliser le serializer pour convertir le tableau de données en JSON
+        $data = $serializer->serialize(
+            $likeData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['like']]
+        );
+    
+        return new Response($data);
+    }
+    
+
     #[Route('/api/inscription', methods: ['POST'])]
-    #[Security(name: null)]
     #[OA\Post(description: 'inscription')]
     #[OA\Response(
         response: 200,
-        description: "insersion d'un user dans la bdd"
+        description: "User ajouté avec succès"
     )]
     #[OA\RequestBody(
         required: true,
@@ -168,18 +321,18 @@ class UserController extends AbstractController
         // Trouver l'extension du format d'image depuis la chaîne base64
         if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
             $imageFormat = $matches[1];
-        
+
             // Générer un nom de fichier unique en utilisant le nom d'utilisateur
             $imageName = $input["username"] . "." . $imageFormat;
             $destinationPath = "./../public/images/" . $imageName;
-            
-        
+
+
             // Extrait les données de l'image (après la virgule)
             $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
-        
+
             // Décode la chaîne base64 en binaire
             $binaryData = base64_decode($imageData);
-        
+
             if ($binaryData !== false) {
                 // Enregistre l'image sur le serveur
                 file_put_contents($destinationPath, $binaryData);
@@ -188,9 +341,9 @@ class UserController extends AbstractController
             // Gestion de l'erreur si le format de l'image n'est pas correct
             // ... (par exemple, renvoyer une réponse d'erreur appropriée)
         }
-        
-        
-        
+
+
+
 
         $entityManager = $doctrine->getManager();
         $user = new User();
@@ -204,18 +357,16 @@ class UserController extends AbstractController
 
         // Utilisez la classe Response de Symfony pour construire la réponse HTTP
         return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_CREATED);
-    
-        
     }
 
-    
+
 
     #[Route('/api/users/{id}', methods: ['PUT'])]
     #[OA\Put(description: 'Mise à jour des informations de l\'utilisateur')]
     #[OA\Put(security: ["oauth2" => ["ROLE_USER", "ROLE_ADMIN"]])]
     #[OA\Response(
         response: 200,
-        description: 'L\'utilisateur mis à jour',
+        description: 'L\'utilisateur mis à jour avec succès',
         content: new OA\JsonContent(ref: new Model(type: User::class))
     )]
     #[OA\RequestBody(
@@ -226,8 +377,8 @@ class UserController extends AbstractController
                 new OA\Property(property: 'username', type: 'string'),
                 new OA\Property(property: 'password', type: 'string'),
                 new OA\Property(property: 'avatar', type: 'string'),
-                new OA\Property(property: 'roles', type: 'string',default: '["ROLE_USER"]'),
-                new OA\Property(property: 'ban', type: 'boolean',default: 'false')
+                new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
+                new OA\Property(property: 'ban', type: 'boolean', default: 'false')
             ]
         )
     )]
@@ -237,33 +388,33 @@ class UserController extends AbstractController
         $input = (array) json_decode(file_get_contents('php://input'), true);
         $entityManager = $doctrine->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
-    
+
         // Vérifiez la présence des champs nécessaires
         if (empty($input["username"]) || empty($input["roles"]) || empty($input["password"]) || empty($input["ban"])) {
             return $this->unprocessableEntityResponse();
         }
         $base64_image = $input["avatar"];
-    
+
         // Trouver l'extension du format d'image depuis la chaîne base64
         if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
             $imageFormat = $matches[1];
-        
+
             // Générer un nom de fichier unique en utilisant le nom d'utilisateur
             $imageName = $input["username"] . "." . $imageFormat;
             $destinationPath = "./../public/images/" . $imageName;
-    
+
             // Supprimer l'image existante s'il y en a une
             $existingImagePath = "./../public/images/" . $user->getAvatar();
             if (file_exists($existingImagePath)) {
                 unlink($existingImagePath);
             }
-        
+
             // Extrait les données de l'image (après la virgule)
             $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
-        
+
             // Décode la chaîne base64 en binaire
             $binaryData = base64_decode($imageData);
-        
+
             if ($binaryData !== false) {
                 // Enregistre la nouvelle image sur le serveur
                 file_put_contents($destinationPath, $binaryData);
@@ -272,7 +423,7 @@ class UserController extends AbstractController
             // Gestion de l'erreur si le format de l'image n'est pas correct
             // ... (par exemple, renvoyer une réponse d'erreur appropriée)
         }
-        
+
         $user->setUsername($input["username"]);
         $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
         $user->setAvatar($imageName); // Utilisez le nom généré pour l'image
@@ -280,11 +431,11 @@ class UserController extends AbstractController
         $user->setBan($input["ban"]);
         $entityManager->persist($user);
         $entityManager->flush();
-    
+
         // Utilisez la classe Response de Symfony pour construire la réponse HTTP
         return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_CREATED);
     }
-    
+
 
 
     #[Route('/api/users/{id}', methods: ['DELETE'])]

@@ -163,7 +163,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @return Collection<int, Like>
      */
-    public function getLike(): Collection
+    public function getLikes(): Collection
     {
         return $this->like;
     }
@@ -241,4 +241,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
+
+    
 }

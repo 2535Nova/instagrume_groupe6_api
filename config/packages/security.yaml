@@ -24,12 +24,13 @@ security:
 
     access_control:
         - { path: ^/api/login, roles: PUBLIC_ACCESS }
-        - { path: ^/api/commentaire, roles: ROLE_USER }
-        - { path: ^/api/like, roles: ROLE_USER }
-        - { path: ^/api/posts, roles: ROLE_USER }
+        - { path: ^/api/commentaire, roles: PUBLIC_ACCESS }
+        - { path: ^/api/like, roles: PUBLIC_ACCESS }
+        - { path: ^/api/posts, roles: PUBLIC_ACCESS }
+        - { path: ^/api/reponse, roles: PUBLIC_ACCESS }
         - { path: ^/api/myself, roles: PUBLIC_ACCESS }
         - { path: ^/api/users/search, roles: PUBLIC_ACCESS }
-        - { path: ^/api/users, roles: ROLE_ADMIN  }
+        - { path: ^/api/users, roles: PUBLIC_ACCESS  }
         - { path: ^/api/inscritpion, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: ROLE_USER }

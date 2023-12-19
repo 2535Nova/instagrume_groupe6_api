@@ -9,9 +9,9 @@ use App\Entity\Reponse;
 use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
-use OpenApi\Annotations\Response;
-use OpenApi\Attributes\Response as AttributesResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Serializer\Normalizer\DateTimeNormalizer;
+use Symfony\Component\Serializer\Serializer;
 
 
 class AppFixtures extends Fixture
@@ -24,7 +24,7 @@ class AppFixtures extends Fixture
     public function load(ObjectManager $manager): void
     {
 
-
+        $serializer = new Serializer(array(new DateTimeNormalizer()));
         $Admin = new User();
         $Admin->setUsername("root");
         $Admin->setRoles(["ROLE_ADMIN"]);
@@ -93,7 +93,7 @@ class AppFixtures extends Fixture
         $commantaire->setUserId($User);
         $commantaire->setPostId($Post);
         $commantaire->setContent("ceci est un test");
-        $date = new \DateTime("2000-02-02");
+        $date = $serializer->denormalize('2016-01-01T00:00:00+00:00', \DateTime::class);
         $commantaire->setDate($date);
         $manager->persist($commantaire);
 
@@ -101,7 +101,7 @@ class AppFixtures extends Fixture
         $commantaire1->setUserId($User);
         $commantaire1->setPostId($Post3);
         $commantaire1->setContent("ceci est le deuxieme commantair");
-        $date1 = new \DateTime("2050-08-10");
+        $date1 = $serializer->denormalize('2050-08-10T00:00:00+00:00', \DateTime::class);
         $commantaire1->setDate($date1);
         $manager->persist($commantaire1);
 
@@ -109,7 +109,7 @@ class AppFixtures extends Fixture
         $commantaire2->setUserId($Test);
         $commantaire2->setPostId($Post3);
         $commantaire2->setContent("ceci est un test de réponse de commantair");
-        $date2 = new \DateTime("2055-08-10");
+        $date2 = $serializer->denormalize('2055-08-10T00:00:00+00:00', \DateTime::class);
         $commantaire2->setDate($date2);
         $manager->persist($commantaire2);
 
