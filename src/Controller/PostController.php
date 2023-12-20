@@ -29,6 +29,7 @@ class PostController extends AbstractController
     }
 
     #[Route('/api/posts', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne les posts')]
     #[OA\Tag(name: 'Posts')]
     #[OA\Response(
         response: 200,
@@ -77,6 +78,7 @@ class PostController extends AbstractController
     
 
     #[Route('/api/posts/{id}', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne le post par son id')]
     #[OA\Tag(name: 'Posts')]
     #[OA\Response(
         response: 200,
@@ -123,6 +125,7 @@ class PostController extends AbstractController
     }
 
     #[Route('/api/posts', methods: ['POST'])]
+    #[OA\Post(description: 'Crée un post')]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
@@ -207,6 +210,7 @@ class PostController extends AbstractController
     }
     
     #[Route('/api/posts/{id}', methods: ['PUT'])]
+    #[OA\Put(description: 'Mise à jour des informations du post')]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
@@ -264,6 +268,7 @@ class PostController extends AbstractController
     
 
     #[Route('/api/posts/{id}', methods: ['DELETE'])]
+    #[OA\Delete(description: 'Suppression du post')]
     #[OA\Response(
         response: 204,
         description: 'Post supprimé avec succès'

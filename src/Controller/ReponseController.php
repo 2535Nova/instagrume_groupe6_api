@@ -32,6 +32,7 @@ class ReponseController extends AbstractController
     }
 
     #[Route('/api/reponse', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne les reponses')]
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
@@ -78,6 +79,7 @@ class ReponseController extends AbstractController
 
 
     #[Route('/api/reponse/{id}', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne la reponse par son id')]
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 200,
@@ -126,6 +128,7 @@ class ReponseController extends AbstractController
 
 
     #[Route('/api/reponse', methods: ['POST'])]
+    #[OA\Post(description: 'Crée une reponse')]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
@@ -196,6 +199,7 @@ class ReponseController extends AbstractController
 
 
     #[Route('/api/reponse/{id}', methods: ['PUT'])]
+    #[OA\Put(description: 'Mise à jour des informations de la reponse')]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
@@ -262,6 +266,7 @@ class ReponseController extends AbstractController
 
 
     #[Route('/api/reponse/{id}', methods: ['DELETE'])]
+    #[OA\Delete(description: 'Suppression de la reponse')]
     #[OA\Tag(name: 'Reponses')]
     #[OA\Response(
         response: 204,

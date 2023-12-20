@@ -48,7 +48,6 @@ class Commentaire
     public function __construct()
     {
         $this->reponses = new ArrayCollection();
-        $this->users = new ArrayCollection();
     }
 
 
@@ -57,6 +56,7 @@ class Commentaire
         return $this->id;
     }
 
+   
 
     public function getContent(): ?string
     {
@@ -82,7 +82,17 @@ class Commentaire
         return $this;
     }
 
+    public function getUserId(): ?User
+    {
+        return $this->user;
+    }
 
+    public function setUserId(?User $user_id): static
+    {
+        $this->user = $user_id;
+
+        return $this;
+    }
 
     public function getPostId(): ?Post
     {
@@ -126,6 +136,17 @@ class Commentaire
         return $this;
     }
 
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
+
+        return $this;
+    }
 
     public function getPost(): ?Post
     {
@@ -141,29 +162,4 @@ class Commentaire
 
 
 
-    /**
-    *@return Collection<int, Users>
-     */
-    public function getUsers(): Collection
-    {
-        return $this->users;
-    }
-    public function setUsers($users)
-    {
-        $this->users = $users;
-
-        return $this;
-    }
-
-    public function normalize(NormalizerInterface $normalizer): array
-    {
-        return [
-            'id' => $this->id,
-            'user' => $this->getUsers(), // Vous pouvez personnaliser cela selon vos besoins
-            'post' => $this->post->getId(), // Idem
-            'content' => $this->content,
-            'date' => $this->date->format("Y-m-d H:i:s"),
-            // ... d'autres propriétés
-        ];
-    }
 }

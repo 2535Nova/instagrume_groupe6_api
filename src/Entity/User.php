@@ -43,11 +43,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class)]
     private Collection $posts;
 
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Reponse::class)]
+    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Post::class)]
     private Collection $reponse;
 
-    #[ORM\ManyToOne(targetEntity: Commentaire::class, inversedBy: 'users')]
-    private ?Commentaire $commentaire;
     public function __construct()
     {
         $this->posts = new ArrayCollection();
@@ -149,7 +147,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
-    
 
     /**
      * @return Collection<int, Post>
@@ -244,25 +241,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
-    public function toArray(): array
-    {
-        return [
-            'id' => $this->getId(),
-            'username' => $this->getUsername(),
-            // Ajoutez d'autres propriétés que vous souhaitez inclure
-        ];
-    }
 
-    public function getCommentaire(): ?Commentaire
-    {
-        return $this->commentaire;
-    }
-
-    public function setCommentaire(?Commentaire $commentaire): static
-    {
-        $this->commentaire = $commentaire;
-
-        return $this;
-    }
-
+    
 }

@@ -106,7 +106,16 @@ class UserController extends AbstractController
     #[OA\Response(
         response: 200,
         description: 'L\'utilisateur correspondant a son username',
-        content: new OA\JsonContent(ref: new Model(type: User::class))
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
+                new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
+                new OA\Property(property: "avatar", type: "string"),
+                new OA\Property(property: "ban",type: "boolean"),
+            ]
+        )  
     )]
     #[OA\Tag(name: 'utilisateurs')]
     public function getUtilisateurByusername(ManagerRegistry $doctrine, Request $request)
@@ -123,14 +132,21 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users/{id}', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne l\'utilisateur par son id')]
     #[OA\Tag(name: 'utilisateurs')]
     #[OA\Response(
         response: 200,
         description: 'Le User selon un ID',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: User::class))
-        )
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
+                new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
+                new OA\Property(property: "avatar", type: "string"),
+                new OA\Property(property: "ban",type: "boolean"),
+            ]
+        )  
     )]
     public function getUserById(ManagerRegistry $doctrine, int $id): Response
     {
@@ -164,15 +180,21 @@ class UserController extends AbstractController
 
     #[Route('/api/users', methods: ['GET'])]
     #[OA\Get(description: 'Retourne la liste de tous les utilisateurs')]
+    #[OA\Tag(name: 'utilisateurs')]
     #[OA\Response(
         response: 200,
         description: 'La liste de tous les utilisateurs',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: User::class))
-        )
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
+                new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
+                new OA\Property(property: "avatar", type: "string"),
+                new OA\Property(property: "ban",type: "boolean"),
+            ]
+        )  
     )]
-    #[OA\Tag(name: 'utilisateurs')]
     public function getAllUsers(ManagerRegistry $doctrine): Response
     {
         $entityManager = $doctrine->getManager();
@@ -201,20 +223,25 @@ class UserController extends AbstractController
     }
 
     #[Route('/api/users/{id}/posts', methods: ['GET'])]
-    #[OA\Get(description: 'Retourne tous les commentaires liés à l\'utilisateur')]
+    #[OA\Get(description: 'Retourne tous les post liés à l\'utilisateur')]
+    #[OA\Tag(name: 'utilisateurs')]
     #[OA\Response(
         response: 200,
-        description: 'La liste de tous les commentaires liés à l\'utilisateur',
+        description: 'La liste de tous les post liés à l\'utilisateur',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: User::class))
-        )
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "post_id", type: "integer"),
+                new OA\Property(property: "islike",type: "boolean"),
+            ]
+        )  
     )]
-    #[OA\Tag(name: 'utilisateurs')]
     public function getUserComments(ManagerRegistry $doctrine, int $id, SerializerInterface $serializer): Response
     {
         $entityManager = $doctrine->getManager();
-        $user = $entityManager->getRepository(Post::class)->find($id);
+        $user = $entityManager->getRepository(User::class)->find($id);
 
         if (!$user) {
             return new Response('Utilisateur non trouvé', 404);
@@ -245,18 +272,26 @@ class UserController extends AbstractController
 
         return new Response($data);
     }
+    
+
 
     #[Route('/api/users/{id}/like', methods: ['GET'])]
     #[OA\Get(description: 'Retourne tous les likes liés à l\'utilisateur')]
+    #[OA\Tag(name: 'utilisateurs')]
     #[OA\Response(
         response: 200,
         description: 'La liste de tous les likes liés à l\'utilisateur',
         content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Like::class))
-        )
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "image", type: "string"),
+                new OA\Property(property: "islock",type: "boolean"),
+                new OA\Property(property: "description",type: "string"),
+            ]
+        )  
     )]
-    #[OA\Tag(name: 'utilisateurs')]
     public function getUserLike(ManagerRegistry $doctrine, int $id, SerializerInterface $serializer): Response
     {
         $entityManager = $doctrine->getManager();
@@ -294,10 +329,6 @@ class UserController extends AbstractController
 
     #[Route('/api/inscription', methods: ['POST'])]
     #[OA\Post(description: 'inscription')]
-    #[OA\Response(
-        response: 200,
-        description: "User ajouté avec succès"
-    )]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
@@ -310,6 +341,20 @@ class UserController extends AbstractController
         )
     )]
     #[OA\Tag(name: 'utilisateurs')]
+    #[OA\Response(
+        response: 201,
+        description: 'User ajouté avec succès',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
+                new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
+                new OA\Property(property: "avatar", type: "string"),
+                new OA\Property(property: "ban",type: "boolean"),
+            ]
+        )  
+    )]
     public function createUser(ManagerRegistry $doctrine)
     {
         $input = (array) json_decode(file_get_contents('php://input'), true);
@@ -364,11 +409,6 @@ class UserController extends AbstractController
 
     #[Route('/api/users/{id}', methods: ['PUT'])]
     #[OA\Put(description: 'Mise à jour des informations de l\'utilisateur')]
-    #[OA\Response(
-        response: 200,
-        description: 'L\'utilisateur mis à jour avec succès',
-        content: new OA\JsonContent(ref: new Model(type: User::class))
-    )]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
@@ -382,6 +422,20 @@ class UserController extends AbstractController
         )
     )]
     #[OA\Tag(name: 'utilisateurs')]
+    #[OA\Response(
+        response: 200,
+        description: 'L\'utilisateur mis à jour avec succès',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
+                new OA\Property(property: "roles", type: "string"),
+                new OA\Property(property: "avatar", type: "string"),
+                new OA\Property(property: "ban",type: "boolean"),
+            ]
+        )  
+    )]
     public function putUser(ManagerRegistry $doctrine, int $id)
     {
         $input = (array) json_decode(file_get_contents('php://input'), true);

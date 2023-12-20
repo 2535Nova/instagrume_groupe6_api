@@ -154,16 +154,5 @@ class Post
         return $this;
     }
 
-    // Dans votre entité Post
-public function toArray(): array
-{
-    return [
-        'id' => $this->id,
-        'description' => $this->description,
-        // Ajoutez d'autres champs nécessaires
-    ];
-}
-
-
 
 }

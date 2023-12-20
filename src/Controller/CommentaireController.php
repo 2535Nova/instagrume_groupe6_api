@@ -32,6 +32,7 @@ class CommentaireController extends AbstractController
 
 
     #[Route('/api/commentaire', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne les commentaires')]
     #[OA\Tag(name: 'Commentaires')]
     #[OA\Response(
         response: 200,
@@ -78,6 +79,7 @@ class CommentaireController extends AbstractController
     }
 
     #[Route('/api/commentaire/{id}', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne le commentaire par son id')]
     #[OA\Tag(name: 'Commentaires')]
     #[OA\Response(
         response: 200,
@@ -129,6 +131,7 @@ class CommentaireController extends AbstractController
 
 
     #[Route('/api/commentaire', methods: ['POST'])]
+    #[OA\Post(description: 'Crée un commentaire')]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
@@ -169,7 +172,7 @@ class CommentaireController extends AbstractController
 
         // Créer une nouvelle instance de l'entité Commentaire
         $commentaire = new Commentaire();
-        $commentaire->setUsers($user);
+        $commentaire->setUser($user);   
         $commentaire->setContent($data["content"]);
 
         // Définir la date et l'heure actuelles
@@ -187,6 +190,7 @@ class CommentaireController extends AbstractController
 
 
     #[Route('/api/commentaire/{id}', methods: ['PUT'])]
+    #[OA\Put(description: 'Mise à jour des informations du commentaire')]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
@@ -246,6 +250,7 @@ class CommentaireController extends AbstractController
 
 
     #[Route('/api/commentaire/{id}', methods: ['DELETE'])]
+    #[OA\Delete(description: 'Suppression du commentaire')]
     #[OA\Tag(name: 'Commentaires')]
     #[OA\Response(
         response: 204,

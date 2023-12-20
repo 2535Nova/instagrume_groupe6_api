@@ -29,6 +29,7 @@ class LikeController extends AbstractController
     }
 
     #[Route('/api/like', methods: ['GET'])]
+    #[OA\Get(description: 'Retourne les likes')]
     #[OA\Tag(name: 'Likes')]
     #[OA\Response(
         response: 200,
@@ -74,6 +75,7 @@ class LikeController extends AbstractController
 
 
     #[Route('/api/like/{id}', methods: ['PUT'])]
+    #[OA\Put(description: 'Mise à jour des informations du like')]
     #[OA\Tag(name: 'Likes')]
     #[OA\Response(
         response: 201,
@@ -126,6 +128,7 @@ class LikeController extends AbstractController
 
 
     #[Route('/api/like/{id}', methods: ['DELETE'])]
+    #[OA\Delete(description: 'Suppression du like')]
     #[OA\Tag(name: 'Likes')]
     #[OA\Response(
         response: 204,
@@ -155,6 +158,7 @@ class LikeController extends AbstractController
     }
 
     #[Route('/api/like', methods: ['POST'])]
+    #[OA\Post(description: 'Crée un like')]
     #[OA\RequestBody(
         required: true,
         content: new OA\JsonContent(
