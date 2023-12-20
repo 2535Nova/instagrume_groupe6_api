@@ -168,11 +168,13 @@ class CommentaireController extends AbstractController
         $user = $entityManager->getRepository(User::class)->find($data["user_id"]);
         $post = $entityManager->getRepository(Post::class)->find($data["post_id"]);
 
-
+        if (!$user || !$post) {
+            return new Response('Utilisateur ou post non trouvé', 404);
+        }
 
         // Créer une nouvelle instance de l'entité Commentaire
         $commentaire = new Commentaire();
-        $commentaire->setUser($user);   
+        $commentaire->setUser($user);
         $commentaire->setContent($data["content"]);
 
         // Définir la date et l'heure actuelles
@@ -184,8 +186,28 @@ class CommentaireController extends AbstractController
         $entityManager->persist($commentaire);
         $entityManager->flush();
 
-        return $this->json($commentaire, Response::HTTP_CREATED, [], ['datetime_format' => 'Y-m-d H:i:s']);
+        // Charger explicitement les entités User et Post si elles sont configurées en lazy loading
+        $user = $commentaire->getUser();
+        $post = $commentaire->getPost();
+
+        // Récupérer les données spécifiques du commentaire
+        $commentaireData = [
+            'id' => $commentaire->getId(),
+            'username' => $user ? $user->getUsername() : null,
+            'post_id' => $post ? $post->getId() : null,
+            'content' => $commentaire->getContent(),
+            'date' => $commentaire->getDate(),
+        ];
+
+        $serializedData = $this->serializer->serialize(
+            $commentaireData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['commentaire']]
+        );
+
+        return new Response($serializedData, Response::HTTP_CREATED, ['Content-Type' => 'application/json']);
     }
+
 
 
 
@@ -227,8 +249,8 @@ class CommentaireController extends AbstractController
         // Récupérer l'utilisateur actuel à partir du token
         $user = $security->getUser();
 
-        // Vérifier si l'utilisateur est autorisé à mettre à jour ce commentaire (vous pouvez adapter cette logique en fonction de vos besoins)
-        if (!$security->isGranted('ROLE_ADMIN') && $user !== $commentaire->getUser()) {
+        // Vérifier si l'utilisateur est autorisé à mettre à jour ce commentaire
+        if (!$this->isAuthorizedToUpdateCommentaire($security, $commentaire, $user)) {
             return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à mettre à jour ce commentaire.'], Response::HTTP_FORBIDDEN);
         }
 
@@ -242,9 +264,33 @@ class CommentaireController extends AbstractController
         // Enregistrez les modifications
         $entityManager->flush();
 
-        return $this->json($commentaire, Response::HTTP_CREATED, [], ['datetime_format' => 'Y-m-d H:i:s']);
+        // Charger explicitement les entités User et Post si elles sont configurées en lazy loading
+        $user = $commentaire->getUser();
+        $post = $commentaire->getPost();
+
+        // Récupérer les données spécifiques du commentaire
+        $commentaireData = [
+            'id' => $commentaire->getId(),
+            'username' => $user ? $user->getUsername() : null,
+            'post_id' => $post ? $post->getId() : null,
+            'content' => $commentaire->getContent(),
+            'date' => $commentaire->getDate(),
+        ];
+
+        $serializedData = $this->serializer->serialize(
+            $commentaireData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['commentaire']]
+        );
+
+        return new Response($serializedData, Response::HTTP_OK, ['Content-Type' => 'application/json']);
     }
 
+    private function isAuthorizedToUpdateCommentaire(Security $security, Commentaire $commentaire, $user): bool
+    {
+        // Adapter la logique d'autorisation en fonction de vos besoins
+        return $security->isGranted('ROLE_ADMIN') || $user === $commentaire->getUser();
+    }
 
 
 
