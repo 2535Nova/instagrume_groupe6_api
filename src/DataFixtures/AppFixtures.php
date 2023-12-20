@@ -90,7 +90,7 @@ class AppFixtures extends Fixture
         $manager->persist($Like3);
 
         $commantaire = new Commentaire();
-        $commantaire->setUsers($User);
+        $commantaire->setUser($User);
         $commantaire->setPostId($Post);
         $commantaire->setContent("ceci est un test");
         $date = $serializer->denormalize('2016-01-01T00:00:00+00:00', \DateTime::class);
@@ -98,7 +98,7 @@ class AppFixtures extends Fixture
         $manager->persist($commantaire);
 
         $commantaire1 = new Commentaire();
-        $commantaire1->setUsers($User);
+        $commantaire1->setUser($User);
         $commantaire1->setPostId($Post3);
         $commantaire1->setContent("ceci est le deuxieme commantair");
         $date1 = $serializer->denormalize('2050-08-10T00:00:00+00:00', \DateTime::class);
@@ -106,7 +106,7 @@ class AppFixtures extends Fixture
         $manager->persist($commantaire1);
 
         $commantaire2 = new Commentaire();
-        $commantaire2->setUsers($Admin);
+        $commantaire2->setUser($Admin);
         $commantaire2->setPostId($Post3);
         $commantaire2->setContent("ceci est un test de réponse de commantair");
         $date2 = $serializer->denormalize('2055-08-10T00:00:00+00:00', \DateTime::class);
