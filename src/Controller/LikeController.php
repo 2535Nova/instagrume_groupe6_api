@@ -84,7 +84,7 @@ class LikeController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "post_id", type: "integer"),
                 new OA\Property(property: "isLike", type: "boolean"),
             ]
@@ -112,7 +112,7 @@ class LikeController extends AbstractController
 
         // Vérifier si l'utilisateur actuel est le propriétaire du like
         if (!$security->isGranted('ROLE_ADMIN') && $user !== $like->getUser()) {
-            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à mettre à jour ce like.'], Response::HTTP_FORBIDDEN);
         }
 
         // Update the like based on request data
@@ -123,7 +123,24 @@ class LikeController extends AbstractController
 
         $entityManager->flush();
 
-        return new Response($this->jsonConverter->encodeToJson(['message' => 'Like mis à jour avec succès']));
+        // Charger explicitement les entités User et Post pour la réponse
+        $user = $like->getUser();
+        $post = $like->getPost();
+
+        $likeData = [
+            'id' => $like->getId(),
+            'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
+            'post_id' => $post ? $post->getId() : null, // Ajouter l'ID du post
+            'islike' => $like->isIslike(),
+        ];
+
+        $data = $this->serializer->serialize(
+            $likeData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['like']]
+        );
+
+        return new Response($data);
     }
 
 
@@ -147,14 +164,31 @@ class LikeController extends AbstractController
 
         // Vérifier si l'utilisateur actuel est le propriétaire du like
         if (!$security->isGranted('ROLE_ADMIN') && $user !== $like->getUser()) {
-            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce like.'], Response::HTTP_FORBIDDEN);
         }
+
+        // Charger explicitement les entités User et Post pour la réponse
+        $user = $like->getUser();
+        $post = $like->getPost();
+
+        $likeData = [
+            'id' => $like->getId(),
+            'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
+            'post_id' => $post ? $post->getId() : null, // Ajouter l'ID du post
+            'islike' => $like->isIslike(),
+        ];
+
+        $data = $this->serializer->serialize(
+            $likeData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['like']]
+        );
 
         // Remove the like
         $entityManager->remove($like);
         $entityManager->flush();
 
-        return new Response(null, Response::HTTP_NO_CONTENT);
+        return new Response($data, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/api/like', methods: ['POST'])]
@@ -178,7 +212,7 @@ class LikeController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "post_id", type: "integer"),
                 new OA\Property(property: "isLike", type: "boolean"),
             ]
@@ -214,6 +248,23 @@ class LikeController extends AbstractController
         $entityManager->persist($like);
         $entityManager->flush();
 
-        return new Response($this->jsonConverter->encodeToJson(['message' => 'Like cree avec succes']), Response::HTTP_CREATED);
+        // Charger explicitement les entités User et Post pour la réponse
+        $user = $like->getUser();
+        $post = $like->getPost();
+
+        $likeData = [
+            'id' => $like->getId(),
+            'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
+            'post_id' => $post ? $post->getId() : null, // Ajouter l'ID du post
+            'islike' => $like->isIslike(),
+        ];
+
+        $data = $this->serializer->serialize(
+            $likeData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['like']]
+        );
+
+        return new Response($data, Response::HTTP_CREATED);
     }
 }
