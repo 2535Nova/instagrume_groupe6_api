@@ -161,40 +161,48 @@ class ReponseController extends AbstractController
 
         $entityManager = $doctrine->getManager();
 
-        // Récupérez l'utilisateur et le post
+        // Récupérez l'utilisateur et le commentaire
         $user = $entityManager->getRepository(User::class)->find($data["user_id"]);
         $commentaire = $entityManager->getRepository(Commentaire::class)->find($data["commentaire_id"]);
 
+        // Vérifiez que l'utilisateur et le commentaire existent
+        if (!$user || !$commentaire) {
+            return new JsonResponse(['message' => 'Utilisateur ou commentaire non trouvé'], Response::HTTP_NOT_FOUND);
+        }
 
-
-        // Créer une nouvelle instance de l'entité reponse
+        // Créer une nouvelle instance de l'entité Reponse
         $reponse = new Reponse();
         $reponse->setUser($user);
         $reponse->setContent($data["content"]);
 
         // Définir la date et l'heure actuelles
-
         $reponse->setDate(new \DateTime('now', new \DateTimeZone('Europe/Paris')));
 
         $reponse->setCommentaire($commentaire);
 
-        // Enregistrez le nouveau commentaire
+        // Enregistrez la nouvelle réponse
         $entityManager->persist($reponse);
         $entityManager->flush();
 
+        // Charger explicitement les entités User et Commentaire pour la réponse
+        $user = $reponse->getUser();
+        $commentaire = $reponse->getCommentaire();
 
+        $reponseData = [
+            'id' => $reponse->getId(),
+            'username' => $user ? $user->getUsername() : null,
+            'commentaire_id' => $commentaire ? $commentaire->getId() : null,
+            'content' => $reponse->getContent(),
+            'date' => $reponse->getDate()->format('Y-m-d H:i:s'),
+        ];
 
         // Utilisez le Serializer pour sérialiser l'entité Reponse en JSON
-        $jsonContent = $serializer->serialize($reponse, 'json', [
-            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
-                return $object->getId();
-            },
-            'datetime_format' => 'Y-m-d H:i:s', // Format de date
-        ]);
+        $jsonContent = $serializer->serialize($reponseData, 'json');
 
         // Retournez la réponse JSON
         return new JsonResponse($jsonContent, Response::HTTP_CREATED, [], true);
     }
+
 
 
 
@@ -224,7 +232,7 @@ class ReponseController extends AbstractController
             ]
         )  
     )]
-    public function updateReponse(int $id, Request $request, ManagerRegistry $doctrine, Security $security,SerializerInterface $serializer): Response
+    public function updateReponse(int $id, Request $request, ManagerRegistry $doctrine, Security $security, SerializerInterface $serializer): Response
     {
         $entityManager = $doctrine->getManager();
         $reponse = $entityManager->getRepository(Reponse::class)->find($id);
@@ -235,14 +243,14 @@ class ReponseController extends AbstractController
 
         $user = $security->getUser();
 
-        // Vérifier si l'utilisateur actuel est le propriétaire du reponse
+        // Vérifier si l'utilisateur actuel est le propriétaire de la réponse
         if (!$security->isGranted('ROLE_ADMIN') && $user !== $reponse->getUser()) {
-            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce commentaire.'], Response::HTTP_FORBIDDEN);
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à mettre à jour cette réponse.'], Response::HTTP_FORBIDDEN);
         }
 
         $data = json_decode($request->getContent(), true);
 
-        // Mettez à jour les propriétés du commentaire en fonction des données de la requête
+        // Mettez à jour les propriétés de la réponse en fonction des données de la requête
         $reponse->setContent($data["content"]);
         // Définir la date et l'heure actuelles
         $reponse->setDate(new \DateTime('now', new \DateTimeZone('Europe/Paris')));
@@ -250,16 +258,23 @@ class ReponseController extends AbstractController
         // Enregistrez les modifications
         $entityManager->flush();
 
+        // Charger explicitement les entités User et Commentaire pour la réponse
+        $user = $reponse->getUser();
+        $commentaire = $reponse->getCommentaire();
+
+        $reponseData = [
+            'id' => $reponse->getId(),
+            'username' => $user ? $user->getUsername() : null,
+            'commentaire_id' => $commentaire ? $commentaire->getId() : null,
+            'content' => $reponse->getContent(),
+            'date' => $reponse->getDate()->format('Y-m-d H:i:s'),
+        ];
+
         // Utilisez le Serializer pour sérialiser l'entité Reponse en JSON
-        $jsonContent = $serializer->serialize($reponse, 'json', [
-            AbstractNormalizer::CIRCULAR_REFERENCE_HANDLER => function ($object) {
-                return $object->getId();
-            },
-            'datetime_format' => 'Y-m-d H:i:s', // Format de date
-        ]);
+        $jsonContent = $serializer->serialize($reponseData, 'json');
 
         // Retournez la réponse JSON
-        return new JsonResponse($jsonContent, Response::HTTP_CREATED, [], true);
+        return new JsonResponse($jsonContent, Response::HTTP_OK, [], true);
     }
 
 

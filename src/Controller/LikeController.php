@@ -3,19 +3,20 @@
 namespace App\Controller;
 
 use App\Entity\Like;
-use App\Service\JsonConverter;
-use Doctrine\Persistence\ManagerRegistry;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Security\Core\Security;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\Post;
 use App\Entity\User;
+use App\Entity\Reponse;
 use OpenApi\Attributes as OA;
-use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use App\Service\JsonConverter;
+use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\Security;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class LikeController extends AbstractController
 {
@@ -151,44 +152,40 @@ class LikeController extends AbstractController
         response: 204,
         description: 'Like supprimé avec succès'
     )]
-    public function deleteLike(int $id, ManagerRegistry $doctrine, Security $security): Response
+    public function deleteCommentaire(int $id, ManagerRegistry $doctrine, Security $security): Response
     {
         $entityManager = $doctrine->getManager();
-        $like = $entityManager->getRepository(Like::class)->find($id);
+        $reponse = $entityManager->getRepository(Reponse::class)->find($id);
 
-        if (!$like) {
-            return new Response($this->jsonConverter->encodeToJson(['message' => 'Like non trouvé']), Response::HTTP_NOT_FOUND);
+        if (!$reponse) {
+            return new JsonResponse(['error' => 'Reponse non trouvé.'], Response::HTTP_NOT_FOUND);
         }
 
         $user = $security->getUser();
 
-        // Vérifier si l'utilisateur actuel est le propriétaire du like
-        if (!$security->isGranted('ROLE_ADMIN') && $user !== $like->getUser()) {
-            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer ce like.'], Response::HTTP_FORBIDDEN);
+        // Vérifier si l'utilisateur actuel est le propriétaire de la réponse
+        if (!$security->isGranted('ROLE_ADMIN') && $user !== $reponse->getUser()) {
+            return new JsonResponse(['error' => 'Vous n\'êtes pas autorisé à supprimer cette réponse.'], Response::HTTP_FORBIDDEN);
         }
 
-        // Charger explicitement les entités User et Post pour la réponse
-        $user = $like->getUser();
-        $post = $like->getPost();
+        // Charger explicitement les entités User et Commentaire pour la réponse
+        $user = $reponse->getUser();
+        $commentaire = $reponse->getCommentaire();
 
-        $likeData = [
-            'id' => $like->getId(),
-            'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
-            'post_id' => $post ? $post->getId() : null, // Ajouter l'ID du post
-            'islike' => $like->isIslike(),
+        $reponseData = [
+            'id' => $reponse->getId(),
+            'username' => $user ? $user->getUsername() : null,
+            'commentaire_id' => $commentaire ? $commentaire->getId() : null,
+            'content' => $reponse->getContent(),
+            'date' => $reponse->getDate()->format('Y-m-d H:i:s'),
         ];
 
-        $data = $this->serializer->serialize(
-            $likeData,
-            'json',
-            [AbstractNormalizer::GROUPS => ['like']]
-        );
-
-        // Remove the like
-        $entityManager->remove($like);
+        // Supprimez la réponse
+        $entityManager->remove($reponse);
         $entityManager->flush();
 
-        return new Response($data, Response::HTTP_NO_CONTENT);
+        // Utilisez le JsonResponse avec les données de la réponse pour la sortie
+        return new JsonResponse($reponseData, Response::HTTP_NO_CONTENT);
     }
 
     #[Route('/api/like', methods: ['POST'])]
@@ -217,7 +214,7 @@ class LikeController extends AbstractController
                 new OA\Property(property: "isLike", type: "boolean"),
             ]
         )
-        
+
     )]
     public function createLike(Request $request, ManagerRegistry $doctrine): Response
     {
