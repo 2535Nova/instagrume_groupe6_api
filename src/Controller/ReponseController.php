@@ -41,7 +41,7 @@ class ReponseController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "commentaire_id", type: "integer"),
                 new OA\Property(property: "content", type: "string"),
                 new OA\Property(property: "date",type: "string", format: "date-time"),
@@ -61,7 +61,7 @@ class ReponseController extends AbstractController
             
             $reponseData[] = [
                 'id' => $reponse->getId(),
-                'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+                'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
                 'commentaire_id' => $reponse->getCommentaire()->getId(), // Ajouter l'ID du commentaire
                 'content' => $reponse->getContent(),
                 'date' => $reponse->getDate(),
@@ -88,7 +88,7 @@ class ReponseController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "commentaire_id", type: "integer"),
                 new OA\Property(property: "content", type: "string"),
                 new OA\Property(property: "date",type: "string", format: "date-time"),
@@ -111,7 +111,7 @@ class ReponseController extends AbstractController
         // Récupérer les données spécifiques de la réponse
         $reponseData = [
             'id' => $reponse->getId(),
-            'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+            'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
             'commentaire_id' => $reponse->getCommentaire()->getId(), // Ajouter l'ID du commentaire
             'content' => $reponse->getContent(),
             'date' => $reponse->getDate(),

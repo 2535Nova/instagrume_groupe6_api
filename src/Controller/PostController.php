@@ -38,7 +38,7 @@ class PostController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "string"),
+                new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "post_id", type: "integer"),
                 new OA\Property(property: "isLike", type: "boolean"),
             ]
@@ -58,7 +58,7 @@ class PostController extends AbstractController
 
             $postData[] = [
                 'id' => $post->getId(),
-                'user_id' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
+                'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
                 'image' => $post->getImage(),
                 'islock' => $post->isIslock(),
                 'description' => $post->getDescription(),
@@ -87,7 +87,7 @@ class PostController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "string"),
+                new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "post_id", type: "integer"),
                 new OA\Property(property: "isLike", type: "boolean"),
             ]

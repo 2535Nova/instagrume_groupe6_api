@@ -38,7 +38,7 @@ class LikeController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "post_id", type: "integer"),
                 new OA\Property(property: "isLike", type: "boolean"),
             ]
@@ -58,7 +58,7 @@ class LikeController extends AbstractController
 
             $likeData[] = [
                 'id' => $like->getId(),
-                'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+                'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
                 'post_id' => $post ? $post->getId() : null, // Ajouter l'ID du post
                 'islike' => $like->isIslike(),
             ];

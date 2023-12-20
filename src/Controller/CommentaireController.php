@@ -41,7 +41,7 @@ class CommentaireController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "post_id", type: "integer"),
                 new OA\Property(property: "content", type: "string"),
                 new OA\Property(property: "date", type: "string", format: "date-time"),
@@ -62,7 +62,7 @@ class CommentaireController extends AbstractController
 
             $commentaireData[] = [
                 'id' => $commentaire->getId(),
-                'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+                'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
                 'post_id' => $post ? $post->getId() : null, // Ajouter l'ID du post
                 'content' => $commentaire->getContent(),
                 'date' => $commentaire->getDate(),
@@ -88,7 +88,7 @@ class CommentaireController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "post_id", type: "integer"),
                 new OA\Property(property: "content", type: "string"),
                 new OA\Property(property: "date", type: "string", format: "date-time"),
@@ -112,7 +112,7 @@ class CommentaireController extends AbstractController
         // Récupérer les données spécifiques du commentaire
         $commentaireData = [
             'id' => $commentaire->getId(),
-            'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
+            'username' => $user ? $user->getUsername() : null, // Ajouter l'ID de l'utilisateur
             'post_id' => $post ? $post->getId() : null, // Ajouter l'ID du post
             'content' => $commentaire->getContent(),
             'date' => $commentaire->getDate(),
