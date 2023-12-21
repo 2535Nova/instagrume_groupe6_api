@@ -484,7 +484,12 @@ class UserController extends AbstractController
         }
 
         $user->setUsername($input["username"]);
-        $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
+        if ($this->passwordHasher->isPasswordValid($user, $input["password"])) {
+            $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
+        }else{
+            $user->setPassword($input["password"]);
+        }
+        //$user->setAvatar($imageName);
         $user->setRoles($input["roles"]);
         $user->setBan($input["ban"]);
         $entityManager->persist($user);
