@@ -371,7 +371,7 @@ class UserController extends AbstractController
 
             // Générer un nom de fichier unique en utilisant le nom d'utilisateur
             $imageName = $input["username"] . "." . $imageFormat;
-            $destinationPath = "./../public/images/" . $imageName;
+            $destinationPath = "./../public/images/user/" . $imageName;
 
 
             // Extrait les données de l'image (après la virgule)
@@ -460,7 +460,7 @@ class UserController extends AbstractController
 
             // Générer un nom de fichier unique en utilisant le nom d'utilisateur
             $imageName = $input["username"] . "." . $imageFormat;
-            $destinationPath = "./../public/images/" . $imageName;
+            $destinationPath = "./../public/images/user/" . $imageName;
 
             // Supprimer l'image existante s'il y en a une
             $existingImagePath = "./../public/images/" . $user->getAvatar();

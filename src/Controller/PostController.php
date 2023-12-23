@@ -145,10 +145,10 @@ class PostController extends AbstractController
         content: new OA\JsonContent(
             type: 'object',
             properties: [
-                new OA\Property(property: "id", type: "integer"),
-                new OA\Property(property: "user_id", type: "integer"),
-                new OA\Property(property: "post_id", type: "integer"),
-                new OA\Property(property: "isLike", type: "boolean"),
+                new OA\Property(property: "user_id", type: "number"),
+                new OA\Property(property: "image", type: "string"),
+                new OA\Property(property: "islock", type: "boolean"),
+                new OA\Property(property: "description", type: "string")
             ]
         )
     )]
