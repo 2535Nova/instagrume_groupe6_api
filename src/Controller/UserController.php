@@ -113,9 +113,9 @@ class UserController extends AbstractController
                 new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
                 new OA\Property(property: "avatar", type: "string"),
-                new OA\Property(property: "ban",type: "boolean"),
+                new OA\Property(property: "ban", type: "boolean"),
             ]
-        )  
+        )
     )]
     #[OA\Tag(name: 'utilisateurs')]
     public function getUtilisateurByusername(ManagerRegistry $doctrine, Request $request)
@@ -144,9 +144,9 @@ class UserController extends AbstractController
                 new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
                 new OA\Property(property: "avatar", type: "string"),
-                new OA\Property(property: "ban",type: "boolean"),
+                new OA\Property(property: "ban", type: "boolean"),
             ]
-        )  
+        )
     )]
     public function getUserById(ManagerRegistry $doctrine, int $id): Response
     {
@@ -191,9 +191,9 @@ class UserController extends AbstractController
                 new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
                 new OA\Property(property: "avatar", type: "string"),
-                new OA\Property(property: "ban",type: "boolean"),
+                new OA\Property(property: "ban", type: "boolean"),
             ]
-        )  
+        )
     )]
     public function getAllUsers(ManagerRegistry $doctrine): Response
     {
@@ -234,9 +234,9 @@ class UserController extends AbstractController
                 new OA\Property(property: "id", type: "integer"),
                 new OA\Property(property: "user_id", type: "integer"),
                 new OA\Property(property: "post_id", type: "integer"),
-                new OA\Property(property: "islike",type: "boolean"),
+                new OA\Property(property: "islike", type: "boolean"),
             ]
-        )  
+        )
     )]
     public function getUserComments(ManagerRegistry $doctrine, int $id, SerializerInterface $serializer): Response
     {
@@ -272,7 +272,7 @@ class UserController extends AbstractController
 
         return new Response($data);
     }
-    
+
 
 
     #[Route('/api/users/{id}/like', methods: ['GET'])]
@@ -287,45 +287,45 @@ class UserController extends AbstractController
                 new OA\Property(property: "id", type: "integer"),
                 new OA\Property(property: "user_id", type: "integer"),
                 new OA\Property(property: "image", type: "string"),
-                new OA\Property(property: "islock",type: "boolean"),
-                new OA\Property(property: "description",type: "string"),
+                new OA\Property(property: "islock", type: "boolean"),
+                new OA\Property(property: "description", type: "string"),
             ]
-        )  
+        )
     )]
     public function getUserLike(ManagerRegistry $doctrine, int $id, SerializerInterface $serializer): Response
     {
         $entityManager = $doctrine->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
-    
+
         if (!$user) {
             return new Response('Utilisateur non trouvé', 404);
         }
-    
+
         // Récupérer les likes associés à l'utilisateur
         $likes = $user->getLikes();
-    
+
         // Construire un tableau de données à sérialiser
         $likeData = [];
         foreach ($likes as $like) {
             $likeData[] = [
                 'id' => $like->getId(),
-                'user_id' => $user ? $user->getId(): null, // Ajouter l'ID de l'utilisateur
+                'user_id' => $user ? $user->getId() : null, // Ajouter l'ID de l'utilisateur
                 'post_id' => $like->getPost() ? $like->getPost()->getId() : null, // Ajouter l'ID du post
                 'islike' => $like->isIslike(),
                 // Ajoutez d'autres champs si nécessaire
             ];
         }
-    
+
         // Utiliser le serializer pour convertir le tableau de données en JSON
         $data = $serializer->serialize(
             $likeData,
             'json',
             [AbstractNormalizer::GROUPS => ['like']]
         );
-    
+
         return new Response($data);
     }
-    
+
 
     #[Route('/api/inscription', methods: ['POST'])]
     #[OA\Post(description: 'inscription')]
@@ -350,9 +350,9 @@ class UserController extends AbstractController
                 new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
                 new OA\Property(property: "avatar", type: "string"),
-                new OA\Property(property: "ban",type: "boolean"),
+                new OA\Property(property: "ban", type: "boolean"),
             ]
-        )  
+        )
     )]
     public function createUser(ManagerRegistry $doctrine)
     {
@@ -361,49 +361,21 @@ class UserController extends AbstractController
         // Vérifiez la présence des champs nécessaires
         if (empty($input["username"]) || empty($input["password"])) {
             return $this->unprocessableEntityResponse();
+
+
+            $entityManager = $doctrine->getManager();
+            $user = new User();
+            $user->setUsername($input["username"]);
+            $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
+            $user->setAvatar("null"); // Utilisez le nom généré pour l'image
+            $user->setRoles(["ROLE_USER"]);
+            $user->setBan(false);
+            $entityManager->persist($user);
+            $entityManager->flush();
+            // Utilisez la classe Response de Symfony pour construire la réponse HTTP
+            return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_CREATED);
         }
-        $base64_image = $input["avatar"];
-
-        // Trouver l'extension du format d'image depuis la chaîne base64
-        if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
-            $imageFormat = $matches[1];
-
-            // Générer un nom de fichier unique en utilisant le nom d'utilisateur
-            $imageName = $input["username"] . "." . $imageFormat;
-            $destinationPath = "./../public/images/user/" . $imageName;
-
-
-            // Extrait les données de l'image (après la virgule)
-            $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
-
-            // Décode la chaîne base64 en binaire
-            $binaryData = base64_decode($imageData);
-
-            if ($binaryData !== false) {
-                // Enregistre l'image sur le serveur
-                file_put_contents($destinationPath, $binaryData);
-            }
-        } else {
-            return new Response('Image invalides', 401);
-        }
-
-
-
-
-        $entityManager = $doctrine->getManager();
-        $user = new User();
-        $user->setUsername($input["username"]);
-        $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
-        $user->setAvatar("null"); // Utilisez le nom généré pour l'image
-        $user->setRoles(["ROLE_USER"]);
-        $user->setBan(false);
-        $entityManager->persist($user);
-        $entityManager->flush();
-
-        // Utilisez la classe Response de Symfony pour construire la réponse HTTP
-        return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_CREATED);
     }
-
 
 
     #[Route('/api/users/{id}', methods: ['PUT'])]
@@ -431,9 +403,9 @@ class UserController extends AbstractController
                 new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "roles", type: "string"),
                 new OA\Property(property: "avatar", type: "string"),
-                new OA\Property(property: "ban",type: "boolean"),
+                new OA\Property(property: "ban", type: "boolean"),
             ]
-        )  
+        )
     )]
     public function putUser(ManagerRegistry $doctrine, int $id)
     {
@@ -485,7 +457,7 @@ class UserController extends AbstractController
         $user->setUsername($input["username"]);
         if ($this->passwordHasher->isPasswordValid($user, $input["password"])) {
             $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
-        }else{
+        } else {
             $user->setPassword($input["password"]);
         }
         //$user->setAvatar($imageName);
