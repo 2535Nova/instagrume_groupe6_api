@@ -335,8 +335,7 @@ class UserController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: 'username', type: 'string', default: 'admin'),
-                new OA\Property(property: 'password', type: 'string', default: 'password'),
-                new OA\Property(property: 'avatar', type: 'string', default: 'avatar')
+                new OA\Property(property: 'password', type: 'string', default: 'password')
             ]
         )
     )]
@@ -360,7 +359,7 @@ class UserController extends AbstractController
         $input = (array) json_decode(file_get_contents('php://input'), true);
 
         // Vérifiez la présence des champs nécessaires
-        if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
+        if (empty($input["username"]) || empty($input["password"])) {
             return $this->unprocessableEntityResponse();
         }
         $base64_image = $input["avatar"];
@@ -395,7 +394,7 @@ class UserController extends AbstractController
         $user = new User();
         $user->setUsername($input["username"]);
         $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
-        $user->setAvatar($imageName); // Utilisez le nom généré pour l'image
+        $user->setAvatar("null"); // Utilisez le nom généré pour l'image
         $user->setRoles(["ROLE_USER"]);
         $user->setBan(false);
         $entityManager->persist($user);
@@ -484,7 +483,12 @@ class UserController extends AbstractController
         }
 
         $user->setUsername($input["username"]);
-        $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
+        if ($this->passwordHasher->isPasswordValid($user, $input["password"])) {
+            $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
+        }else{
+            $user->setPassword($input["password"]);
+        }
+        //$user->setAvatar($imageName);
         $user->setRoles($input["roles"]);
         $user->setBan($input["ban"]);
         $entityManager->persist($user);
