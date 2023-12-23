@@ -335,8 +335,7 @@ class UserController extends AbstractController
             type: 'object',
             properties: [
                 new OA\Property(property: 'username', type: 'string', default: 'admin'),
-                new OA\Property(property: 'password', type: 'string', default: 'password'),
-                new OA\Property(property: 'avatar', type: 'string', default: 'avatar')
+                new OA\Property(property: 'password', type: 'string', default: 'password')
             ]
         )
     )]
@@ -360,42 +359,15 @@ class UserController extends AbstractController
         $input = (array) json_decode(file_get_contents('php://input'), true);
 
         // Vérifiez la présence des champs nécessaires
-        if (empty($input["username"]) || empty($input["password"]) || empty($input["avatar"])) {
+        if (empty($input["username"]) || empty($input["password"])) {
             return $this->unprocessableEntityResponse();
         }
-        $base64_image = $input["avatar"];
-
-        // Trouver l'extension du format d'image depuis la chaîne base64
-        if (preg_match('/^data:image\/(\w+);base64,/', $base64_image, $matches)) {
-            $imageFormat = $matches[1];
-
-            // Générer un nom de fichier unique en utilisant le nom d'utilisateur
-            $imageName = $input["username"] . "." . $imageFormat;
-            $destinationPath = "./../public/images/" . $imageName;
-
-
-            // Extrait les données de l'image (après la virgule)
-            $imageData = substr($base64_image, strpos($base64_image, ',') + 1);
-
-            // Décode la chaîne base64 en binaire
-            $binaryData = base64_decode($imageData);
-
-            if ($binaryData !== false) {
-                // Enregistre l'image sur le serveur
-                file_put_contents($destinationPath, $binaryData);
-            }
-        } else {
-            return new Response('Image invalides', 401);
-        }
-
-
-
 
         $entityManager = $doctrine->getManager();
         $user = new User();
         $user->setUsername($input["username"]);
         $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
-        $user->setAvatar($imageName); // Utilisez le nom généré pour l'image
+        $user->setAvatar("null"); // Utilisez le nom généré pour l'image
         $user->setRoles(["ROLE_USER"]);
         $user->setBan(false);
         $entityManager->persist($user);
