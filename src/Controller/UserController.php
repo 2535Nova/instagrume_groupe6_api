@@ -359,10 +359,7 @@ class UserController extends AbstractController
         $input = (array) json_decode(file_get_contents('php://input'), true);
 
         // Vérifiez la présence des champs nécessaires
-        if (empty($input["username"]) || empty($input["password"])) {
-            return $this->unprocessableEntityResponse();
-
-
+        if (!empty($input["username"]) || !empty($input["password"])) {
             $entityManager = $doctrine->getManager();
             $user = new User();
             $user->setUsername($input["username"]);
@@ -375,6 +372,7 @@ class UserController extends AbstractController
             // Utilisez la classe Response de Symfony pour construire la réponse HTTP
             return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_CREATED);
         }
+        return new Response("Les champs username et password doivent etre rempli", Response::HTTP_BAD_REQUEST);
     }
 
 
