@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\Entity\Post;
-use App\Service\JsonConverter;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,12 +20,11 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 class PostController extends AbstractController
 {
 
-    private $jsonConverter;
+    
     private $serializer;
 
-    public function __construct(JsonConverter $jsonConverter, SerializerInterface $serializer)
+    public function __construct( SerializerInterface $serializer)
     {
-        $this->jsonConverter = $jsonConverter;
         $this->serializer = $serializer;
     }
 

@@ -2,27 +2,26 @@
 
 namespace App\Controller;
 
-use App\Entity\Like;
-use App\Entity\Post;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Doctrine\Persistence\ManagerRegistry;
 use Nelmio\ApiDocBundle\Annotation\Model;
-use Nelmio\ApiDocBundle\Annotation\Security;
-use Symfony\Component\HttpFoundation\JsonResponse;
 
+use Symfony\Component\Security\Core\Security;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use OpenApi\Attributes as OA;
-
 use App\Service\JsonConverter;
 use App\Entity\User;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
+use Symfony\Component\Security\Core\User\UserInterface;
+
 
 class UserController extends AbstractController
 {
@@ -30,6 +29,7 @@ class UserController extends AbstractController
     private $jsonConverter;
     private $passwordHasher;
     private $serializer;
+
 
     public  function __construct(JsonConverter $jsonConverter, UserPasswordHasherInterface $passwordHasher, SerializerInterface $serializer)
     {
@@ -385,9 +385,7 @@ class UserController extends AbstractController
         content: new OA\JsonContent(
             type: 'object',
             properties: [
-                new OA\Property(property: 'password', type: 'string'),
-                new OA\Property(property: 'avatar', type: 'string'),
-                new OA\Property(property: 'roles', type: 'string', default: '["ROLE_USER"]'),
+                new OA\Property(property: 'roles', type: 'string', default: 'ROLE_USER'),
                 new OA\Property(property: 'ban', type: 'boolean', default: 'false')
             ]
         )
@@ -402,13 +400,18 @@ class UserController extends AbstractController
                 new OA\Property(property: "id", type: "integer"),
                 new OA\Property(property: "username", type: "string"),
                 new OA\Property(property: "roles", type: "string"),
-                new OA\Property(property: "avatar", type: "string"),
                 new OA\Property(property: "ban", type: "boolean"),
             ]
         )
     )]
-    public function putUser(ManagerRegistry $doctrine, int $id)
+    public function putUser(ManagerRegistry $doctrine, int $id, Security $security)
     {
+
+        // Vérifie si l'utilisateur a le rôle "ROLE_ADMIN"
+        if (!$security->isGranted('ROLE_ADMIN')) {
+            throw new AccessDeniedException('Vous n\'êtes pas autorisé à utiliser cette fonction.');
+        }
+
         $input = (array) json_decode(file_get_contents('php://input'), true);
         $jsonError = json_last_error();
 
@@ -420,8 +423,172 @@ class UserController extends AbstractController
         $user = $entityManager->getRepository(User::class)->find($id);
 
         // Vérifiez la présence des champs nécessaires
+        if (!isset($input["roles"]) && !isset($input["ban"])) {
+            return $this->json(['error' => 'Le rôle et la valeur de ban sont requises'], Response::HTTP_BAD_REQUEST);
+        }
+        $roles = $input["roles"];
+
+        // Vérifier si $roles est une chaîne, puis le convertir en tableau si nécessaire
+        if (is_string($roles)) {
+            $roles = [$roles];
+        }
+
+        $user->setRoles($roles);
+
+        $user->setRoles($roles);
+        $user->setBan($input["ban"]);
+        $entityManager->persist($user);
+        $entityManager->flush();
+
+        // Construire le tableau associatif avec les données à retourner
+        $avatarData = [
+            'id' => $user->getId(),
+            'username' => $user->getUsername(),
+            'roles' => $user->getRoles(),
+            'ban' => $user->isBan(),
+            // Ajoutez d'autres champs si nécessaire
+        ];
+
+        // Sérialiser le tableau associatif en JSON
+        $serializedData = $this->serializer->serialize(
+            $avatarData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['avatar']]
+        );
+
+        // Retourner la réponse HTTP
+        return new Response($serializedData, Response::HTTP_OK, ['Content-Type' => 'application/json']);
+    }
+
+    #[Route('/api/users/{id}/password', methods: ['PUT'])]
+    #[OA\Put(description: 'Mise à jour des informations de l\'utilisateur')]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'password', type: 'string'),
+            ]
+        )
+    )]
+    #[OA\Tag(name: 'utilisateurs')]
+    #[OA\Response(
+        response: 200,
+        description: 'L\'utilisateur mis à jour avec succès',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
+            ]
+        )
+    )]
+    public function putPassword(ManagerRegistry $doctrine, int $id, JWTEncoderInterface $jwtEncoder, Request $request)
+    {
+
+        $input = (array) json_decode(file_get_contents('php://input'), true);
+        $jsonError = json_last_error();
+
+        if ($jsonError !== JSON_ERROR_NONE) {
+            return $this->json(['error' => 'Erreur JSON : ' . json_last_error_msg()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $entityManager = $doctrine->getManager();
+        $user = $entityManager->getRepository(User::class)->find($id);
+
+        $tokenString = str_replace('Bearer ', '', $request->headers->get('Authorization'));
+
+        $tokenuser = $jwtEncoder->decode($tokenString);
+        $usernameToken = $tokenuser['username'];
+        if ($usernameToken !== $user->getUsername()) {
+            // Retourner une réponse d'erreur indiquant que l'utilisateur ne peut pas être modifié
+            return $this->json(['error' => 'Vous n\'êtes pas autorisé à modifier cet utilisateur.'], Response::HTTP_FORBIDDEN);
+        }
+        // Vérifiez la présence des champs nécessaires
         if (empty($input["password"])) {
             return $this->json(['error' => 'Le mot de passe est requis.'], Response::HTTP_BAD_REQUEST);
+        }
+
+
+        if ($this->passwordHasher->isPasswordValid($user, $input["password"])) {
+            $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
+        } else {
+            $user->setPassword($input["password"]);
+        }
+        //$user->setAvatar($imageName);
+        $entityManager->persist($user);
+        $entityManager->flush();
+
+        // Construire le tableau associatif avec les données à retourner
+        $avatarData = [
+            'id' => $user->getId(),
+            'username' => $user->getUsername(),
+            // Ajoutez d'autres champs si nécessaire
+        ];
+
+        // Sérialiser le tableau associatif en JSON
+        $serializedData = $this->serializer->serialize(
+            $avatarData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['avatar']]
+        );
+
+        // Retourner la réponse HTTP
+        return new Response($serializedData, Response::HTTP_OK, ['Content-Type' => 'application/json']);
+    }
+
+
+
+    #[Route('/api/users/{id}/avatar', methods: ['PUT'])]
+    #[OA\Put(description: 'Mise à jour des informations de l\'utilisateur')]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'avatar', type: 'string'),
+            ]
+        )
+    )]
+    #[OA\Tag(name: 'utilisateurs')]
+    #[OA\Response(
+        response: 200,
+        description: 'L\'utilisateur mis à jour avec succès',
+        content: new OA\JsonContent(
+            type: 'object',
+            properties: [
+                new OA\Property(property: "id", type: "integer"),
+                new OA\Property(property: "username", type: "string"),
+                new OA\Property(property: "avatar", type: "string"),
+            ]
+        )
+    )]
+    public function putAvatar(ManagerRegistry $doctrine, int $id, JWTEncoderInterface $jwtEncoder, Request $request)
+    {
+        $input = (array) json_decode(file_get_contents('php://input'), true);
+        $jsonError = json_last_error();
+
+        if ($jsonError !== JSON_ERROR_NONE) {
+            return $this->json(['error' => 'Erreur JSON : ' . json_last_error_msg()], Response::HTTP_BAD_REQUEST);
+        }
+
+        $entityManager = $doctrine->getManager();
+        $user = $entityManager->getRepository(User::class)->find($id);
+
+        $tokenString = str_replace('Bearer ', '', $request->headers->get('Authorization'));
+
+        $tokenuser = $jwtEncoder->decode($tokenString);
+        $usernameToken = $tokenuser['username'];
+        if ($usernameToken !== $user->getUsername()) {
+            // Retourner une réponse d'erreur indiquant que l'utilisateur ne peut pas être modifié
+            return $this->json(['error' => 'Vous n\'êtes pas autorisé à modifier cet utilisateur.'], Response::HTTP_FORBIDDEN);
+        }
+
+
+
+        // Vérifiez la présence des champs nécessaires
+        if (empty($input["avatar"])) {
+            return $this->json(['error' => 'un avatar est requis.'], Response::HTTP_BAD_REQUEST);
         }
         $base64_image = $input["avatar"];
 
@@ -430,12 +597,13 @@ class UserController extends AbstractController
             $imageFormat = $matches[1];
 
             // Générer un nom de fichier unique en utilisant le nom d'utilisateur
-            $imageName = $input["username"] . "." . $imageFormat;
+
+            $imageName = $user->getUsername() . "." . $imageFormat;
             $destinationPath = "./../public/images/user/" . $imageName;
 
             // Supprimer l'image existante s'il y en a une
-            $existingImagePath = "./../public/images/" . $user->getAvatar();
-            if (file_exists($existingImagePath)) {
+            $existingImagePath = "./../public/images/user/" . $user->getAvatar();
+            if (file_exists($existingImagePath) && is_file($existingImagePath)) {
                 unlink($existingImagePath);
             }
 
@@ -454,34 +622,47 @@ class UserController extends AbstractController
             // ... (par exemple, renvoyer une réponse d'erreur appropriée)
         }
 
-        $user->setUsername($input["username"]);
-        if ($this->passwordHasher->isPasswordValid($user, $input["password"])) {
-            $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
-        } else {
-            $user->setPassword($input["password"]);
-        }
-        //$user->setAvatar($imageName);
-        $user->setRoles($input["roles"]);
-        $user->setBan($input["ban"]);
+        $user->setAvatar($imageName);
         $entityManager->persist($user);
         $entityManager->flush();
 
-        // Utilisez la classe Response de Symfony pour construire la réponse HTTP
-        return new Response($this->jsonConverter->encodeToJson($user), Response::HTTP_OK);
+        // Construire le tableau associatif avec les données à retourner
+        $avatarData = [
+            'id' => $user->getId(),
+            'username' => $user->getUsername(),
+            'avatar' => $user->getAvatar(),         // Ajoutez d'autres champs si nécessaire
+        ];
+
+        // Sérialiser le tableau associatif en JSON
+        $serializedData = $this->serializer->serialize(
+            $avatarData,
+            'json',
+            [AbstractNormalizer::GROUPS => ['avatar']]
+        );
+
+        // Retourner la réponse HTTP
+        return new Response($serializedData, Response::HTTP_OK, ['Content-Type' => 'application/json']);
     }
+
+
+
 
 
 
     #[Route('/api/users/{id}', methods: ['DELETE'])]
     #[OA\Delete(description: 'Suppression de l\'utilisateur')]
-    #[Security(name: "ROLE_ADMIN")]
     #[OA\Response(
         response: 204,
         description: 'Utilisateur supprimé avec succès'
     )]
     #[OA\Tag(name: 'utilisateurs')]
-    public function deleteUser(ManagerRegistry $doctrine, int $id)
+    public function deleteUser(ManagerRegistry $doctrine, int $id,Security $security)
     {
+
+        // Vérifie si l'utilisateur a le rôle "ROLE_ADMIN"
+        if (!$security->isGranted('ROLE_ADMIN')) {
+            throw new AccessDeniedException('Vous n\'êtes pas autorisé à utiliser cette fonction.');
+        }
         $entityManager = $doctrine->getManager();
         $user = $entityManager->getRepository(User::class)->find($id);
         if (!$user) {
