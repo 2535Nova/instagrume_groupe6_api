@@ -506,13 +506,7 @@ class UserController extends AbstractController
         if (empty($input["password"])) {
             return $this->json(['error' => 'Le mot de passe est requis.'], Response::HTTP_BAD_REQUEST);
         }
-
-
-        if ($this->passwordHasher->isPasswordValid($user, $input["password"])) {
-            $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));
-        } else {
-            $user->setPassword($input["password"]);
-        }
+        $user->setPassword($this->passwordHasher->hashPassword($user, $input["password"]));    
         //$user->setAvatar($imageName);
         $entityManager->persist($user);
         $entityManager->flush();
