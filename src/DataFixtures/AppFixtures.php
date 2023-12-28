@@ -30,12 +30,14 @@ class AppFixtures extends Fixture
         $Admin->setRoles(["ROLE_ADMIN"]);
         $Admin->setPassword($this->passwordHasher->hashPassword($Admin, 'root'));
         $Admin->setBan(FALSE);
+        $Admin->setAvatar("root.jpeg");
         $manager->persist($Admin);
 
         $User = new User();
         $User->setUsername("user");
         $User->setRoles(["ROLE_USER"]);
         $User->setPassword($this->passwordHasher->hashPassword($User, 'user'));
+        $User->setAvatar("user.jpeg");
         $User->setBan(FALSE);
         $manager->persist($User);
 
@@ -50,18 +52,21 @@ class AppFixtures extends Fixture
         $Post = new Post();
         $Post->setUser($Admin);
         $Post->setIslock(FALSE);
+        $Post->setImage("rootPost1.jpg");
         $Post->setDescription(" ceci est un poste de test");
         $manager->persist($Post);
 
         $Post2 = new Post();
         $Post2->setUser($User);
         $Post2->setIslock(FALSE);
+        $Post2->setImage("userPost2.jpg");
         $Post2->setDescription(" ceci est un poste 2 !");
         $manager->persist($Post2);
 
         $Post3 = new Post();
         $Post3->setUser($Test);
         $Post3->setIslock(TRUE);
+        $Post3->setImage("testPost3.jpg");
         $Post3->setDescription(" ceci est un poste verouillé");
         $manager->persist($Post3);
 
