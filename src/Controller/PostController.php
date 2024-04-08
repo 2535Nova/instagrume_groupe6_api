@@ -124,6 +124,7 @@ class PostController extends AbstractController
         return new Response($data);
     }
 
+    
     #[Route('/api/posts', methods: ['POST'])]
     #[OA\Post(description: 'Crée un post')]
     #[OA\RequestBody(
